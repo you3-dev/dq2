@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
@@ -26,25 +26,46 @@ export function Player({ onRef }) {
   // AnimationMixerを手動でセットアップ
   useEffect(() => {
     if (scene && animations.length > 0) {
-      console.log('Setting up AnimationMixer manually')
-      console.log('Scene:', scene)
-      console.log('Animations:', animations)
+      console.log('Setting up AnimationMixer')
 
-      // 新しいミキサーを作成
+      // シーン内のSkinnedMeshまたはボーン構造を探す
+      let animationRoot = scene
+
+      // シーン内を走査してSkinnedMeshを探す
+      scene.traverse((child) => {
+        if (child.isSkinnedMesh) {
+          console.log('Found SkinnedMesh:', child.name)
+          console.log('Skeleton root:', child.skeleton?.bones[0]?.parent?.name)
+        }
+        if (child.type === 'Bone' && child.parent && child.parent.type !== 'Bone') {
+          console.log('Found root bone parent:', child.parent.name, child.parent.type)
+          // ボーンの親（通常はArmatureやObject3D）を使う
+          if (!animationRoot || animationRoot === scene) {
+            animationRoot = child.parent.parent || child.parent
+          }
+        }
+      })
+
+      console.log('Using animation root:', animationRoot.name, animationRoot.type)
+
+      // アニメーションクリップのトラック名を確認
+      const jogClip = animations.find(clip => clip.name === 'Jog_Fwd_Loop')
+      if (jogClip && jogClip.tracks.length > 0) {
+        console.log('Sample track names:')
+        jogClip.tracks.slice(0, 5).forEach(track => {
+          console.log('  -', track.name)
+        })
+      }
+
+      // ミキサーを作成（シーン全体を使用）
       const mixer = new THREE.AnimationMixer(scene)
       mixerRef.current = mixer
 
-      // Jog_Fwd_Loopアニメーションを取得
-      const jogClip = animations.find(clip => clip.name === 'Jog_Fwd_Loop')
       if (jogClip) {
-        console.log('Found Jog_Fwd_Loop clip:', jogClip)
-        console.log('Clip duration:', jogClip.duration)
-        console.log('Clip tracks:', jogClip.tracks.length)
-
         const action = mixer.clipAction(jogClip)
         actionRef.current = action
         action.play()
-        console.log('Animation action started')
+        console.log('Animation started with scene as root')
       }
     }
 
@@ -62,7 +83,7 @@ export function Player({ onRef }) {
   }, [onRef])
 
   useFrame((state, delta) => {
-    // アニメーションミキサーを更新（重要！）
+    // アニメーションミキサーを更新
     if (mixerRef.current) {
       mixerRef.current.update(delta)
     }
@@ -80,7 +101,6 @@ export function Player({ onRef }) {
         if (moving) {
           actionRef.current.paused = false
         } else {
-          // 停止時はアニメーションを一時停止
           actionRef.current.paused = true
         }
       }
@@ -88,24 +108,16 @@ export function Player({ onRef }) {
 
     // 入力がある場合のみ移動
     if (moving) {
-      // カメラの向きを基準にした移動方向を計算
       const moveAngle = Math.atan2(moveX, moveZ) + cameraAngle
-
-      // 移動速度
       const speed = PLAYER_CONFIG.moveSpeed * delta
 
-      // 移動ベクトル
       velocity.current.x = Math.sin(moveAngle) * speed
       velocity.current.z = Math.cos(moveAngle) * speed
 
-      // 位置更新
       groupRef.current.position.x += velocity.current.x
       groupRef.current.position.z += velocity.current.z
-
-      // キャラクターの向きを移動方向に
       groupRef.current.rotation.y = moveAngle
 
-      // ストアに位置を保存
       updatePlayerPosition([
         groupRef.current.position.x,
         groupRef.current.position.y,
