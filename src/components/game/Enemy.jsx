@@ -2,20 +2,18 @@ import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
-
-// 敵モデルのプリロード
-useGLTF.preload('/models/enemies/GreenBlob.gltf')
-useGLTF.preload('/models/enemies/PinkBlob.gltf')
-useGLTF.preload('/models/enemies/GreenSpikyBlob.gltf')
-useGLTF.preload('/models/enemies/Mushnub.gltf')
+import { getModelPath } from '../../utils/paths'
 
 // 敵タイプとモデルのマッピング
 const ENEMY_MODELS = {
-  slime: '/models/enemies/GreenBlob.gltf',
-  slime_pink: '/models/enemies/PinkBlob.gltf',
-  slime_spiky: '/models/enemies/GreenSpikyBlob.gltf',
-  mushroom: '/models/enemies/Mushnub.gltf',
+  slime: getModelPath('enemies/GreenBlob.gltf'),
+  slime_pink: getModelPath('enemies/PinkBlob.gltf'),
+  slime_spiky: getModelPath('enemies/GreenSpikyBlob.gltf'),
+  mushroom: getModelPath('enemies/Mushnub.gltf'),
 }
+
+// 敵モデルのプリロード
+Object.values(ENEMY_MODELS).forEach(path => useGLTF.preload(path))
 
 export function Enemy({
   type = 'slime',

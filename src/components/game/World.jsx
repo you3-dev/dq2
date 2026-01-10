@@ -1,17 +1,23 @@
 import { useRef, Suspense, useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
 import { WORLD_CONFIG } from '../../constants/config'
+import { getModelPath } from '../../utils/paths'
+
+// モデルパス定義
+const MODEL_PATHS = {
+  tree: getModelPath('environment/fantasy-town/tree.glb'),
+  treeHigh: getModelPath('environment/fantasy-town/tree-high.glb'),
+  rockLarge: getModelPath('environment/fantasy-town/rock-large.glb'),
+  rockSmall: getModelPath('environment/fantasy-town/rock-small.glb'),
+  wallDoor: getModelPath('environment/fantasy-town/wall-door.glb'),
+  roofGable: getModelPath('environment/fantasy-town/roof-gable.glb'),
+  windmill: getModelPath('environment/fantasy-town/windmill.glb'),
+  stallGreen: getModelPath('environment/fantasy-town/stall-green.glb'),
+  fountainRound: getModelPath('environment/fantasy-town/fountain-round.glb'),
+}
 
 // GLTFモデルをプリロード
-useGLTF.preload('/models/environment/fantasy-town/tree.glb')
-useGLTF.preload('/models/environment/fantasy-town/tree-high.glb')
-useGLTF.preload('/models/environment/fantasy-town/rock-large.glb')
-useGLTF.preload('/models/environment/fantasy-town/rock-small.glb')
-useGLTF.preload('/models/environment/fantasy-town/wall-door.glb')
-useGLTF.preload('/models/environment/fantasy-town/roof-gable.glb')
-useGLTF.preload('/models/environment/fantasy-town/windmill.glb')
-useGLTF.preload('/models/environment/fantasy-town/stall-green.glb')
-useGLTF.preload('/models/environment/fantasy-town/fountain-round.glb')
+Object.values(MODEL_PATHS).forEach(path => useGLTF.preload(path))
 
 export function World() {
   return (
@@ -43,7 +49,7 @@ function Ground() {
 
 // GLTFモデルの木
 function GLTFTree({ position, scale = 1, rotation = 0 }) {
-  const { scene } = useGLTF('/models/environment/fantasy-town/tree.glb')
+  const { scene } = useGLTF(MODEL_PATHS.tree)
   const clonedScene = useMemo(() => scene.clone(), [scene])
 
   return (
@@ -59,7 +65,7 @@ function GLTFTree({ position, scale = 1, rotation = 0 }) {
 }
 
 function GLTFTreeHigh({ position, scale = 1, rotation = 0 }) {
-  const { scene } = useGLTF('/models/environment/fantasy-town/tree-high.glb')
+  const { scene } = useGLTF(MODEL_PATHS.treeHigh)
   const clonedScene = useMemo(() => scene.clone(), [scene])
 
   return (
@@ -115,9 +121,7 @@ function Trees() {
 
 // GLTFモデルの岩
 function GLTFRock({ position, scale = 1, type = 'large' }) {
-  const modelPath = type === 'large'
-    ? '/models/environment/fantasy-town/rock-large.glb'
-    : '/models/environment/fantasy-town/rock-small.glb'
+  const modelPath = type === 'large' ? MODEL_PATHS.rockLarge : MODEL_PATHS.rockSmall
   const { scene } = useGLTF(modelPath)
   const clonedScene = useMemo(() => scene.clone(), [scene])
 
@@ -159,8 +163,8 @@ function Rocks() {
 
 // 村の建物（GLTFモデル）
 function VillageHouse({ position, rotation = 0, scale = 1 }) {
-  const wallModel = useGLTF('/models/environment/fantasy-town/wall-door.glb')
-  const roofModel = useGLTF('/models/environment/fantasy-town/roof-gable.glb')
+  const wallModel = useGLTF(MODEL_PATHS.wallDoor)
+  const roofModel = useGLTF(MODEL_PATHS.roofGable)
 
   const wallScene = useMemo(() => wallModel.scene.clone(), [wallModel.scene])
   const roofScene = useMemo(() => roofModel.scene.clone(), [roofModel.scene])
@@ -174,7 +178,7 @@ function VillageHouse({ position, rotation = 0, scale = 1 }) {
 }
 
 function Windmill({ position, rotation = 0, scale = 1 }) {
-  const { scene } = useGLTF('/models/environment/fantasy-town/windmill.glb')
+  const { scene } = useGLTF(MODEL_PATHS.windmill)
   const clonedScene = useMemo(() => scene.clone(), [scene])
 
   return (
@@ -190,7 +194,7 @@ function Windmill({ position, rotation = 0, scale = 1 }) {
 }
 
 function Stall({ position, rotation = 0, scale = 1 }) {
-  const { scene } = useGLTF('/models/environment/fantasy-town/stall-green.glb')
+  const { scene } = useGLTF(MODEL_PATHS.stallGreen)
   const clonedScene = useMemo(() => scene.clone(), [scene])
 
   return (
@@ -206,7 +210,7 @@ function Stall({ position, rotation = 0, scale = 1 }) {
 }
 
 function Fountain({ position, scale = 1 }) {
-  const { scene } = useGLTF('/models/environment/fantasy-town/fountain-round.glb')
+  const { scene } = useGLTF(MODEL_PATHS.fountainRound)
   const clonedScene = useMemo(() => scene.clone(), [scene])
 
   return (
