@@ -1,6 +1,6 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useGLTF, useAnimations } from '@react-three/drei'
+import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGameStore } from '../../stores/gameStore'
 import { PLAYER_CONFIG } from '../../constants/config'
@@ -14,15 +14,46 @@ useGLTF.preload(PLAYER_MODEL_PATH)
 
 export function Player({ onRef }) {
   const groupRef = useRef()
+  const mixerRef = useRef(null)
+  const actionRef = useRef(null)
   const { input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState } = useGameStore()
   const velocity = useRef(new THREE.Vector3())
   const isMoving = useRef(false)
 
-  // GLTFモデルとアニメーションをロード（クローンせず直接使用）
+  // GLTFモデルとアニメーションをロード
   const { scene, animations } = useGLTF(PLAYER_MODEL_PATH)
 
-  // アニメーション - sceneを直接使用
-  const { actions } = useAnimations(animations, scene)
+  // AnimationMixerを手動でセットアップ
+  useEffect(() => {
+    if (scene && animations.length > 0) {
+      console.log('Setting up AnimationMixer manually')
+      console.log('Scene:', scene)
+      console.log('Animations:', animations)
+
+      // 新しいミキサーを作成
+      const mixer = new THREE.AnimationMixer(scene)
+      mixerRef.current = mixer
+
+      // Jog_Fwd_Loopアニメーションを取得
+      const jogClip = animations.find(clip => clip.name === 'Jog_Fwd_Loop')
+      if (jogClip) {
+        console.log('Found Jog_Fwd_Loop clip:', jogClip)
+        console.log('Clip duration:', jogClip.duration)
+        console.log('Clip tracks:', jogClip.tracks.length)
+
+        const action = mixer.clipAction(jogClip)
+        actionRef.current = action
+        action.play()
+        console.log('Animation action started')
+      }
+    }
+
+    return () => {
+      if (mixerRef.current) {
+        mixerRef.current.stopAllAction()
+      }
+    }
+  }, [scene, animations])
 
   useEffect(() => {
     if (groupRef.current && onRef) {
@@ -30,19 +61,12 @@ export function Player({ onRef }) {
     }
   }, [onRef])
 
-  // アニメーション制御
-  useEffect(() => {
-    console.log('Available animations:', Object.keys(actions))
-
-    // デフォルトでJog再生（テスト）
-    const jogAction = actions['Jog_Fwd_Loop']
-    if (jogAction) {
-      console.log('Starting Jog_Fwd_Loop animation')
-      jogAction.play()
-    }
-  }, [actions])
-
   useFrame((state, delta) => {
+    // アニメーションミキサーを更新（重要！）
+    if (mixerRef.current) {
+      mixerRef.current.update(delta)
+    }
+
     if (!groupRef.current || gameState !== 'playing') return
 
     const { moveX, moveZ } = input
@@ -51,13 +75,13 @@ export function Player({ onRef }) {
     // 移動状態が変わったらアニメーション切り替え
     if (moving !== isMoving.current) {
       isMoving.current = moving
-      const jogAction = actions['Jog_Fwd_Loop']
 
-      if (jogAction) {
+      if (actionRef.current) {
         if (moving) {
-          jogAction.reset().fadeIn(0.2).play()
+          actionRef.current.paused = false
         } else {
-          jogAction.fadeOut(0.5)
+          // 停止時はアニメーションを一時停止
+          actionRef.current.paused = true
         }
       }
     }
