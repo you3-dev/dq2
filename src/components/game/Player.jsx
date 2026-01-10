@@ -1,5 +1,5 @@
 import { useRef, useEffect, useMemo } from 'react'
-import { useFrame, useGraph } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
 import { SkeletonUtils } from 'three-stdlib'
@@ -15,6 +15,7 @@ useGLTF.preload(PLAYER_MODEL_PATH)
 
 export function Player({ onRef }) {
   const groupRef = useRef()
+  const modelRef = useRef()
   const { input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState } = useGameStore()
   const velocity = useRef(new THREE.Vector3())
   const isMoving = useRef(false)
@@ -25,8 +26,8 @@ export function Player({ onRef }) {
   // SkeletonUtils.clone()でスケルトン付きモデルを正しくクローン
   const clone = useMemo(() => SkeletonUtils.clone(scene), [scene])
 
-  // アニメーション用のref
-  const { actions } = useAnimations(animations, clone)
+  // アニメーション - modelRefを使用
+  const { actions, mixer } = useAnimations(animations, modelRef)
 
   useEffect(() => {
     if (groupRef.current && onRef) {
@@ -37,16 +38,23 @@ export function Player({ onRef }) {
   // アニメーション制御
   useEffect(() => {
     console.log('Available animations:', Object.keys(actions))
+    console.log('Actions:', actions)
 
-    // 初期状態でIdleアニメーションがあれば再生
-    const idleAction = actions['Idle'] || actions['idle']
-    if (idleAction) {
-      idleAction.play()
+    // Jog_Fwd_Loopをデフォルトで再生してみる（テスト）
+    const jogAction = actions['Jog_Fwd_Loop']
+    if (jogAction) {
+      console.log('Playing Jog_Fwd_Loop')
+      jogAction.reset().play()
     }
   }, [actions])
 
   useFrame((state, delta) => {
     if (!groupRef.current || gameState !== 'playing') return
+
+    // アニメーションミキサーを更新
+    if (mixer) {
+      mixer.update(delta)
+    }
 
     const { moveX, moveZ } = input
     const moving = moveX !== 0 || moveZ !== 0
@@ -60,7 +68,7 @@ export function Player({ onRef }) {
         if (moving) {
           jogAction.reset().fadeIn(0.2).play()
         } else {
-          jogAction.fadeOut(0.2)
+          jogAction.fadeOut(0.5)
         }
       }
     }
@@ -97,6 +105,7 @@ export function Player({ onRef }) {
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
       <primitive
+        ref={modelRef}
         object={clone}
         scale={1}
         rotation={[0, Math.PI, 0]}
