@@ -23,7 +23,7 @@ export function Player({ onRef }) {
     // 入力がある場合のみ移動
     if (moveX !== 0 || moveZ !== 0) {
       // カメラの向きを基準にした移動方向を計算
-      const moveAngle = Math.atan2(moveX, moveZ) + cameraAngle + Math.PI
+      const moveAngle = Math.atan2(moveX, moveZ) + cameraAngle
 
       // 移動速度
       const speed = PLAYER_CONFIG.moveSpeed * delta
