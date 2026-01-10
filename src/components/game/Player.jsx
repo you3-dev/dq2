@@ -81,6 +81,28 @@ export function Player({ onRef }) {
       const sampleTracks = clip.tracks.slice(0, 5).map(t => t.name)
       console.log('Sample track names:', sampleTracks)
 
+      // ボーンがシーンツリー内で見つかるか確認
+      const rootBone = clonedScene.getObjectByName('root')
+      const pelvisBone = clonedScene.getObjectByName('pelvis')
+      console.log('Can find root bone:', !!rootBone, rootBone?.type)
+      console.log('Can find pelvis bone:', !!pelvisBone, pelvisBone?.type)
+
+      // SkinnedMeshからスケルトンのボーン名を取得
+      let firstSkeleton = null
+      clonedScene.traverse((child) => {
+        if (child.isSkinnedMesh && child.skeleton && !firstSkeleton) {
+          firstSkeleton = child.skeleton
+        }
+      })
+      if (firstSkeleton) {
+        console.log('Skeleton bone names:', firstSkeleton.bones.slice(0, 5).map(b => b.name))
+        // ボーンの親を確認
+        const rootInSkeleton = firstSkeleton.bones.find(b => b.name === 'root')
+        if (rootInSkeleton) {
+          console.log('Root bone parent:', rootInSkeleton.parent?.name, rootInSkeleton.parent?.type)
+        }
+      }
+
       const action = mixer.clipAction(clip)
       actionRef.current = action
       action.setLoop(THREE.LoopRepeat)
