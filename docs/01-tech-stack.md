@@ -18,61 +18,160 @@
 | **@react-three/fiber** | 8.x | React向けThree.jsラッパー |
 | **@react-three/drei** | 9.x | R3F用ヘルパー・コンポーネント集 |
 
-### 追加ライブラリ（必要に応じて）
+### 追加ライブラリ
 
 | ライブラリ | 用途 |
 |-----------|------|
-| **@react-three/rapier** | 物理エンジン（衝突判定、重力） |
 | **zustand** | 軽量状態管理（ゲーム状態、インベントリ） |
+| **@react-three/rapier** | 物理エンジン（衝突判定、重力） |
 | **howler.js** | BGM・効果音 |
-| **leva** | 開発用デバッグUI |
 
 ---
 
-## ディレクトリ構成
+## ディレクトリ構成（大規模プロジェクト対応）
 
 ```
 project-root/
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml    # GitHub Pages デプロイ設定
-├── docs/                  # ドキュメント
-├── public/
-│   ├── models/           # GLTFモデル (.glb)
+│       └── deploy.yml        # GitHub Pages デプロイ設定
+├── docs/                     # ドキュメント
+│
+├── public/                   # 静的アセット
+│   ├── models/              # GLTFモデル (.glb)
+│   │   ├── characters/      # プレイヤーキャラクター
+│   │   ├── npcs/           # NPC
+│   │   ├── enemies/        # 敵モンスター
+│   │   ├── environment/    # 環境・マップオブジェクト
+│   │   ├── items/          # アイテム
+│   │   └── effects/        # エフェクト
+│   ├── textures/           # テクスチャ画像
 │   │   ├── characters/
-│   │   ├── enemies/
 │   │   ├── environment/
-│   │   └── items/
-│   ├── textures/         # テクスチャ画像
-│   └── audio/            # BGM・効果音
-├── src/
-│   ├── components/
-│   │   ├── game/
-│   │   │   ├── Player.jsx
-│   │   │   ├── Camera.jsx
-│   │   │   ├── World.jsx
-│   │   │   ├── NPC.jsx
-│   │   │   └── Enemy.jsx
 │   │   └── ui/
-│   │       ├── HUD.jsx
-│   │       ├── Dialog.jsx
-│   │       ├── Menu.jsx
-│   │       └── VirtualJoystick.jsx
-│   ├── hooks/
-│   │   ├── usePlayerControls.js
-│   │   ├── useCamera.js
-│   │   └── useGameState.js
-│   ├── stores/
-│   │   └── gameStore.js      # zustand store
-│   ├── utils/
-│   │   ├── collision.js
-│   │   └── animation.js
-│   ├── constants/
-│   │   └── config.js
-│   ├── App.jsx
-│   └── main.jsx
-├── package.json
-└── vite.config.js
+│   └── audio/              # 音声
+│       ├── bgm/            # BGM
+│       ├── sfx/            # 効果音
+│       └── voice/          # ボイス
+│
+└── src/
+    ├── components/          # Reactコンポーネント
+    │   ├── game/           # ゲーム3Dコンポーネント
+    │   │   ├── Player.jsx
+    │   │   ├── Camera.jsx
+    │   │   ├── World.jsx
+    │   │   ├── NPC.jsx
+    │   │   └── Enemy.jsx
+    │   └── ui/             # UI コンポーネント
+    │       ├── HUD.jsx
+    │       ├── Dialog.jsx
+    │       ├── Menu.jsx
+    │       └── VirtualJoystick.jsx
+    │
+    ├── data/               # ゲームデータ定義
+    │   ├── schemas/        # 型定義・スキーマ
+    │   │   ├── types.js           # 基本型・Enum
+    │   │   ├── character.schema.js
+    │   │   ├── enemy.schema.js
+    │   │   ├── item.schema.js
+    │   │   ├── npc.schema.js
+    │   │   ├── map.schema.js
+    │   │   ├── quest.schema.js
+    │   │   ├── dialog.schema.js
+    │   │   └── index.js
+    │   ├── npcs/           # NPCデータ
+    │   ├── enemies/        # 敵データ
+    │   ├── items/          # アイテムデータ
+    │   ├── maps/           # マップデータ
+    │   ├── quests/         # クエストデータ
+    │   ├── dialogs/        # 会話データ
+    │   └── index.js        # 統合エクスポート
+    │
+    ├── systems/            # ゲームシステム
+    │   ├── battle/         # バトルシステム
+    │   ├── quest/          # クエストシステム
+    │   ├── dialog/         # 会話システム
+    │   ├── inventory/      # インベントリ
+    │   ├── save/           # セーブシステム
+    │   └── index.js
+    │
+    ├── scenes/             # シーン管理
+    │   ├── TitleScene.jsx
+    │   ├── FieldScene.jsx
+    │   ├── BattleScene.jsx
+    │   └── index.js
+    │
+    ├── hooks/              # カスタムフック
+    │   ├── usePlayerControls.js
+    │   ├── useCamera.js
+    │   └── useGameState.js
+    │
+    ├── stores/             # Zustand ストア
+    │   └── gameStore.js
+    │
+    ├── constants/          # 定数
+    │   └── config.js
+    │
+    ├── utils/              # ユーティリティ
+    │   ├── collision.js
+    │   └── animation.js
+    │
+    ├── App.jsx
+    └── main.jsx
+```
+
+---
+
+## データスキーマ設計
+
+### 基本型 (`src/data/schemas/types.js`)
+
+```javascript
+// 属性タイプ
+export const ElementType = {
+  NONE: 'none',
+  FIRE: 'fire',
+  ICE: 'ice',
+  THUNDER: 'thunder',
+  WIND: 'wind',
+  EARTH: 'earth',
+  LIGHT: 'light',
+  DARK: 'dark',
+}
+
+// 職業タイプ
+export const JobType = {
+  HERO: 'hero',
+  WARRIOR: 'warrior',
+  MAGE: 'mage',
+  PRIEST: 'priest',
+  // ...
+}
+
+// アイテムカテゴリ
+export const ItemCategory = {
+  CONSUMABLE: 'consumable',
+  WEAPON: 'weapon',
+  ARMOR: 'armor',
+  ACCESSORY: 'accessory',
+  KEY_ITEM: 'key_item',
+}
+```
+
+### データ使用例
+
+```javascript
+// データのインポート
+import { getItemById, getEnemyById, getMapById, GameData } from '@/data'
+
+// アイテム取得
+const herb = getItemById('herb')
+
+// 敵取得
+const slime = getEnemyById('slime')
+
+// マップ内のNPC一覧取得
+const npcsInTown = GameData.npc.getByMap('town_start')
 ```
 
 ---
@@ -82,7 +181,6 @@ project-root/
 ### ローダー設定
 
 ```javascript
-// GLTFLoader + DRACOLoader（圧縮モデル対応）
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader'
 
@@ -109,8 +207,27 @@ function Character() {
   return <primitive object={scene} />
 }
 
-// プリロード
 useGLTF.preload('/models/characters/hero.glb')
+```
+
+### モデルファイル命名規則
+
+```
+/models/
+  characters/
+    hero.glb              # プレイヤーキャラクター
+    hero_animations.glb   # アニメーション別ファイル（オプション）
+  npcs/
+    elder.glb             # 長老
+    merchant_weapon.glb   # 武器屋
+  enemies/
+    slime.glb
+    slime_metal.glb
+    dragon_boss.glb
+  environment/
+    tree_oak.glb
+    house_village.glb
+    dungeon_entrance.glb
 ```
 
 ---
@@ -126,14 +243,6 @@ useGLTF.preload('/models/characters/hero.glb')
 | **Kenney** | https://kenney.nl/assets | CC0、ゲーム向け |
 | **Sketchfab** | https://sketchfab.com | 高品質、要ライセンス確認 |
 
-### 環境・建物
-
-| サイト | URL | 特徴 |
-|--------|-----|------|
-| **Quaternius** | https://quaternius.com | ファンタジー建物、自然物 |
-| **Poly Pizza** | https://poly.pizza | シンプルローポリ |
-| **Kenney** | https://kenney.nl | 建物、道、小物 |
-
 ### 推奨パック（Quaternius）
 
 - **Ultimate Animated Character Pack** - キャラクター
@@ -145,7 +254,6 @@ useGLTF.preload('/models/characters/hero.glb')
 ## カメラ設定（ドラクエ風）
 
 ```javascript
-// 推奨パラメータ
 const CAMERA_CONFIG = {
   distance: 10,        // キャラからの距離
   height: 6,           // 高さ
@@ -181,7 +289,6 @@ const CAMERA_CONFIG = {
 - [React Three Fiber ドキュメント](https://docs.pmnd.rs/react-three-fiber)
 - [Drei ヘルパー一覧](https://github.com/pmndrs/drei)
 - [GLTF フォーマット仕様](https://www.khronos.org/gltf/)
-- [Mixamo 使い方ガイド](https://helpx.adobe.com/creative-cloud/help/mixamo.html)
 
 ---
 
