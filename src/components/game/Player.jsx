@@ -34,48 +34,58 @@ export function Player({ onRef }) {
   useEffect(() => {
     if (!clonedScene || animations.length === 0) return
 
-    // デバッグ: ボーン構造を確認
+    // デバッグ: ボーン構造とArmatureを確認
     let boneCount = 0
     let skinnedMeshCount = 0
-    let skeletonRoot = null
+    let armature = null
 
     clonedScene.traverse((child) => {
       if (child.type === 'Bone') {
         boneCount++
-        // rootボーンを見つける（Armatureの直接の子）
-        if (child.name === 'root') {
-          skeletonRoot = child
+      }
+      // Armatureオブジェクトを見つける（スケルトンの親）
+      if (child.name === 'Armature' || child.type === 'Object3D' && child.children.some(c => c.type === 'Bone')) {
+        if (!armature && child.name === 'Armature') {
+          armature = child
         }
       }
       if (child.isSkinnedMesh) {
         skinnedMeshCount++
-        console.log('SkinnedMesh:', child.name, 'has skeleton:', !!child.skeleton)
-        if (child.skeleton) {
-          console.log('  Skeleton bones count:', child.skeleton.bones.length)
-        }
+        console.log('SkinnedMesh:', child.name, 'skeleton bones:', child.skeleton?.bones.length)
       }
     })
 
-    console.log('Total bones found:', boneCount)
-    console.log('Total SkinnedMeshes:', skinnedMeshCount)
-    console.log('Skeleton root found:', skeletonRoot?.name)
+    console.log('Total bones:', boneCount, 'SkinnedMeshes:', skinnedMeshCount)
+    console.log('Armature found:', armature?.name)
 
-    // スケルトンルートをミキサーのルートに使用
-    const mixerRoot = skeletonRoot || clonedScene
-    console.log('Using mixer root:', mixerRoot.name || 'clonedScene')
-
-    const mixer = new THREE.AnimationMixer(mixerRoot)
+    // clonedScene全体をミキサーのルートに使用
+    // これによりトラック名 "root.position" が正しく解決される
+    const mixer = new THREE.AnimationMixer(clonedScene)
     mixerRef.current = mixer
 
-    const jogClip = animations.find(clip => clip.name === 'Jog_Fwd_Loop')
-    if (jogClip) {
-      console.log('Animation clip found, tracks:', jogClip.tracks.length)
-      console.log('Sample tracks:', jogClip.tracks.slice(0, 3).map(t => t.name))
+    // 利用可能なアニメーションを確認
+    console.log('Available animations:', animations.map(a => a.name))
 
-      const action = mixer.clipAction(jogClip)
+    // Jog_Fwd_Loopアニメーションを探す
+    let clip = animations.find(c => c.name === 'Jog_Fwd_Loop')
+    if (!clip && animations.length > 0) {
+      // 見つからない場合は最初のアニメーションを使用
+      clip = animations[0]
+      console.log('Using fallback animation:', clip.name)
+    }
+
+    if (clip) {
+      console.log('Animation:', clip.name, 'duration:', clip.duration, 'tracks:', clip.tracks.length)
+
+      // トラック名のサンプルを表示
+      const sampleTracks = clip.tracks.slice(0, 5).map(t => t.name)
+      console.log('Sample track names:', sampleTracks)
+
+      const action = mixer.clipAction(clip)
       actionRef.current = action
+      action.setLoop(THREE.LoopRepeat)
       action.play()
-      console.log('Animation action played')
+      console.log('Animation started')
     }
 
     return () => {
