@@ -23,49 +23,34 @@ export function Player({ onRef }) {
   // GLTFモデルとアニメーションをロード
   const { scene, animations } = useGLTF(PLAYER_MODEL_PATH)
 
-  // AnimationMixerを手動でセットアップ
+  // AnimationMixerをセットアップ
   useEffect(() => {
     if (scene && animations.length > 0) {
-      console.log('Setting up AnimationMixer')
-
-      // シーン内のSkinnedMeshまたはボーン構造を探す
-      let animationRoot = scene
-
-      // シーン内を走査してSkinnedMeshを探す
+      // Armatureを探す（ボーンの親）
+      let armature = null
       scene.traverse((child) => {
-        if (child.isSkinnedMesh) {
-          console.log('Found SkinnedMesh:', child.name)
-          console.log('Skeleton root:', child.skeleton?.bones[0]?.parent?.name)
-        }
-        if (child.type === 'Bone' && child.parent && child.parent.type !== 'Bone') {
-          console.log('Found root bone parent:', child.parent.name, child.parent.type)
-          // ボーンの親（通常はArmatureやObject3D）を使う
-          if (!animationRoot || animationRoot === scene) {
-            animationRoot = child.parent.parent || child.parent
-          }
+        if (child.name === 'Armature' && child.type === 'Object3D') {
+          armature = child
         }
       })
 
-      console.log('Using animation root:', animationRoot.name, animationRoot.type)
-
-      // アニメーションクリップのトラック名を確認
-      const jogClip = animations.find(clip => clip.name === 'Jog_Fwd_Loop')
-      if (jogClip && jogClip.tracks.length > 0) {
-        console.log('Sample track names:')
-        jogClip.tracks.slice(0, 5).forEach(track => {
-          console.log('  -', track.name)
-        })
+      if (!armature) {
+        console.warn('Armature not found, using scene')
+        armature = scene
       }
 
-      // ミキサーを作成（シーン全体を使用）
-      const mixer = new THREE.AnimationMixer(scene)
+      console.log('Using armature as mixer root:', armature.name)
+
+      // ミキサーをArmatureに対して作成
+      const mixer = new THREE.AnimationMixer(armature)
       mixerRef.current = mixer
 
+      const jogClip = animations.find(clip => clip.name === 'Jog_Fwd_Loop')
       if (jogClip) {
         const action = mixer.clipAction(jogClip)
         actionRef.current = action
         action.play()
-        console.log('Animation started with scene as root')
+        console.log('Animation playing on Armature')
       }
     }
 
