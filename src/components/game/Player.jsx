@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useGLTF, useAnimations } from '@react-three/drei'
+import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGameStore } from '../../stores/gameStore'
 import { PLAYER_CONFIG } from '../../constants/config'
@@ -14,36 +14,65 @@ useGLTF.preload(PLAYER_MODEL_PATH)
 
 export function Player({ onRef }) {
   const groupRef = useRef()
+  const mixerRef = useRef(null)
+  const actionRef = useRef(null)
   const { input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState } = useGameStore()
   const velocity = useRef(new THREE.Vector3())
   const isMoving = useRef(false)
 
   // GLTFモデルとアニメーションをロード
-  // クローンせず元のシーンを直接使用（アニメーションが元のボーンにバインドされているため）
   const { scene, animations } = useGLTF(PLAYER_MODEL_PATH)
 
-  // useAnimationsフックでアニメーションをセットアップ（元のシーンを直接参照）
-  const { actions, names } = useAnimations(animations, scene)
-
-  // デバッグとアニメーション開始
+  // 手動でAnimationMixerをセットアップ
   useEffect(() => {
-    console.log('Available animation names:', names)
-    console.log('Actions:', Object.keys(actions))
+    if (!scene || animations.length === 0) return
 
-    // Jog_Fwd_Loopアニメーションを再生
-    const jogAction = actions['Jog_Fwd_Loop']
-    if (jogAction) {
-      console.log('Playing Jog_Fwd_Loop animation')
-      jogAction.reset().setLoop(THREE.LoopRepeat).play()
-    } else if (names.length > 0) {
-      // フォールバック: 最初のアニメーションを再生
-      const firstAction = actions[names[0]]
-      if (firstAction) {
-        console.log('Playing fallback animation:', names[0])
-        firstAction.reset().setLoop(THREE.LoopRepeat).play()
+    console.log('Setting up AnimationMixer manually')
+    console.log('Scene:', scene.name, scene.type)
+    console.log('Animations:', animations.map(a => a.name))
+
+    // SkinnedMeshを見つけてスケルトン情報を確認
+    let skinnedMesh = null
+    scene.traverse((child) => {
+      if (child.isSkinnedMesh && !skinnedMesh) {
+        skinnedMesh = child
+        console.log('Found SkinnedMesh:', child.name)
+        console.log('Skeleton bones:', child.skeleton?.bones.length)
+        console.log('Skeleton root:', child.skeleton?.bones[0]?.name)
       }
+    })
+
+    // AnimationMixerを作成（シーン全体をルートに）
+    const mixer = new THREE.AnimationMixer(scene)
+    mixerRef.current = mixer
+
+    // アニメーションクリップを取得
+    const clip = animations.find(c => c.name === 'Jog_Fwd_Loop') || animations[0]
+    if (clip) {
+      console.log('Using clip:', clip.name, 'duration:', clip.duration)
+      console.log('Track count:', clip.tracks.length)
+      console.log('First track:', clip.tracks[0]?.name)
+
+      // PropertyBindingの解決を確認
+      const testBone = scene.getObjectByName('root')
+      console.log('Can find root bone in scene:', !!testBone, testBone?.uuid?.substring(0, 8))
+
+      const action = mixer.clipAction(clip)
+      actionRef.current = action
+      action.setLoop(THREE.LoopRepeat)
+      action.clampWhenFinished = false
+      action.play()
+
+      console.log('Action created and playing')
+      console.log('Action isRunning:', action.isRunning())
     }
-  }, [actions, names])
+
+    return () => {
+      mixer.stopAllAction()
+      mixerRef.current = null
+      actionRef.current = null
+    }
+  }, [scene, animations])
 
   useEffect(() => {
     if (groupRef.current && onRef) {
@@ -52,6 +81,11 @@ export function Player({ onRef }) {
   }, [onRef])
 
   useFrame((state, delta) => {
+    // アニメーションミキサーを更新
+    if (mixerRef.current) {
+      mixerRef.current.update(delta)
+    }
+
     if (!groupRef.current || gameState !== 'playing') return
 
     const { moveX, moveZ } = input
@@ -60,9 +94,8 @@ export function Player({ onRef }) {
     // 移動状態が変化した時にアニメーションを制御
     if (moving !== isMoving.current) {
       isMoving.current = moving
-      const jogAction = actions['Jog_Fwd_Loop']
-      if (jogAction) {
-        jogAction.paused = !moving
+      if (actionRef.current) {
+        actionRef.current.paused = !moving
       }
     }
 
