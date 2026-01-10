@@ -1,27 +1,62 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { useGLTF, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGameStore } from '../../stores/gameStore'
 import { PLAYER_CONFIG } from '../../constants/config'
+import { getModelPath } from '../../utils/paths'
+
+// プレイヤーモデルのパス
+const PLAYER_MODEL_PATH = getModelPath('characters/Female_Ranger.gltf')
+
+// モデルをプリロード
+useGLTF.preload(PLAYER_MODEL_PATH)
 
 export function Player({ onRef }) {
-  const meshRef = useRef()
+  const groupRef = useRef()
   const { input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState } = useGameStore()
   const velocity = useRef(new THREE.Vector3())
+  const isMoving = useRef(false)
+
+  // GLTFモデルとアニメーションをロード
+  const { scene, animations } = useGLTF(PLAYER_MODEL_PATH)
+  const clonedScene = useMemo(() => scene.clone(), [scene])
+  const { actions } = useAnimations(animations, clonedScene)
 
   useEffect(() => {
-    if (meshRef.current && onRef) {
-      onRef(meshRef)
+    if (groupRef.current && onRef) {
+      onRef(groupRef)
     }
   }, [onRef])
 
+  // アニメーション制御
+  useEffect(() => {
+    // 利用可能なアニメーションをログ出力（デバッグ用）
+    console.log('Available animations:', Object.keys(actions))
+  }, [actions])
+
   useFrame((state, delta) => {
-    if (!meshRef.current || gameState !== 'playing') return
+    if (!groupRef.current || gameState !== 'playing') return
 
     const { moveX, moveZ } = input
+    const moving = moveX !== 0 || moveZ !== 0
+
+    // 移動状態が変わったらアニメーション切り替え
+    if (moving !== isMoving.current) {
+      isMoving.current = moving
+      const jogAction = actions['Jog_Fwd_Loop']
+
+      if (jogAction) {
+        if (moving) {
+          jogAction.reset().fadeIn(0.2).play()
+        } else {
+          jogAction.fadeOut(0.2)
+        }
+      }
+    }
 
     // 入力がある場合のみ移動
-    if (moveX !== 0 || moveZ !== 0) {
+    if (moving) {
       // カメラの向きを基準にした移動方向を計算
       const moveAngle = Math.atan2(moveX, moveZ) + cameraAngle
 
@@ -33,48 +68,31 @@ export function Player({ onRef }) {
       velocity.current.z = Math.cos(moveAngle) * speed
 
       // 位置更新
-      meshRef.current.position.x += velocity.current.x
-      meshRef.current.position.z += velocity.current.z
+      groupRef.current.position.x += velocity.current.x
+      groupRef.current.position.z += velocity.current.z
 
       // キャラクターの向きを移動方向に
-      meshRef.current.rotation.y = moveAngle
+      groupRef.current.rotation.y = moveAngle
 
       // ストアに位置を保存
       updatePlayerPosition([
-        meshRef.current.position.x,
-        meshRef.current.position.y,
-        meshRef.current.position.z,
+        groupRef.current.position.x,
+        groupRef.current.position.y,
+        groupRef.current.position.z,
       ])
       updatePlayerRotation(moveAngle)
     }
   })
 
   return (
-    <group ref={meshRef} position={[0, 0.5, 0]}>
-      {/* プレイヤーの仮モデル（後でGLTFに置き換え） */}
-      {/* 体 */}
-      <mesh position={[0, 0.5, 0]} castShadow>
-        <capsuleGeometry args={[0.3, 0.6, 8, 16]} />
-        <meshStandardMaterial color="#4a90d9" />
-      </mesh>
-
-      {/* 頭 */}
-      <mesh position={[0, 1.2, 0]} castShadow>
-        <sphereGeometry args={[0.25, 16, 16]} />
-        <meshStandardMaterial color="#f5c6a5" />
-      </mesh>
-
-      {/* 髪の毛 */}
-      <mesh position={[0, 1.35, 0]} castShadow>
-        <sphereGeometry args={[0.28, 16, 16]} />
-        <meshStandardMaterial color="#5c3317" />
-      </mesh>
-
-      {/* 目印（前方向） */}
-      <mesh position={[0, 1.2, -0.3]} castShadow>
-        <sphereGeometry args={[0.05, 8, 8]} />
-        <meshStandardMaterial color="#333" />
-      </mesh>
+    <group ref={groupRef} position={[0, 0, 0]}>
+      <primitive
+        object={clonedScene}
+        scale={0.8}
+        rotation={[0, Math.PI, 0]}
+        castShadow
+        receiveShadow
+      />
     </group>
   )
 }
