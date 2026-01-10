@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
+import { useGLTF, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
 import { SkeletonUtils } from 'three-stdlib'
 import { useGameStore } from '../../stores/gameStore'
@@ -15,8 +15,7 @@ useGLTF.preload(PLAYER_MODEL_PATH)
 
 export function Player({ onRef }) {
   const groupRef = useRef()
-  const mixerRef = useRef(null)
-  const actionRef = useRef(null)
+  const modelRef = useRef()
   const { input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState } = useGameStore()
   const velocity = useRef(new THREE.Vector3())
   const isMoving = useRef(false)
@@ -30,91 +29,28 @@ export function Player({ onRef }) {
     return clone
   }, [scene])
 
-  // AnimationMixerをセットアップ
+  // useAnimationsフックでアニメーションをセットアップ
+  const { actions, names, mixer } = useAnimations(animations, modelRef)
+
+  // デバッグとアニメーション開始
   useEffect(() => {
-    if (!clonedScene || animations.length === 0) return
+    console.log('Available animation names:', names)
+    console.log('Actions:', Object.keys(actions))
 
-    // デバッグ: ボーン構造とArmatureを確認
-    let boneCount = 0
-    let skinnedMeshCount = 0
-    let armature = null
-
-    clonedScene.traverse((child) => {
-      if (child.type === 'Bone') {
-        boneCount++
+    // Jog_Fwd_Loopアニメーションを再生
+    const jogAction = actions['Jog_Fwd_Loop']
+    if (jogAction) {
+      console.log('Playing Jog_Fwd_Loop animation')
+      jogAction.reset().setLoop(THREE.LoopRepeat).play()
+    } else if (names.length > 0) {
+      // フォールバック: 最初のアニメーションを再生
+      const firstAction = actions[names[0]]
+      if (firstAction) {
+        console.log('Playing fallback animation:', names[0])
+        firstAction.reset().setLoop(THREE.LoopRepeat).play()
       }
-      // Armatureオブジェクトを見つける（スケルトンの親）
-      if (child.name === 'Armature' || child.type === 'Object3D' && child.children.some(c => c.type === 'Bone')) {
-        if (!armature && child.name === 'Armature') {
-          armature = child
-        }
-      }
-      if (child.isSkinnedMesh) {
-        skinnedMeshCount++
-        console.log('SkinnedMesh:', child.name, 'skeleton bones:', child.skeleton?.bones.length)
-      }
-    })
-
-    console.log('Total bones:', boneCount, 'SkinnedMeshes:', skinnedMeshCount)
-    console.log('Armature found:', armature?.name)
-
-    // clonedScene全体をミキサーのルートに使用
-    // これによりトラック名 "root.position" が正しく解決される
-    const mixer = new THREE.AnimationMixer(clonedScene)
-    mixerRef.current = mixer
-
-    // 利用可能なアニメーションを確認
-    console.log('Available animations:', animations.map(a => a.name))
-
-    // Jog_Fwd_Loopアニメーションを探す
-    let clip = animations.find(c => c.name === 'Jog_Fwd_Loop')
-    if (!clip && animations.length > 0) {
-      // 見つからない場合は最初のアニメーションを使用
-      clip = animations[0]
-      console.log('Using fallback animation:', clip.name)
     }
-
-    if (clip) {
-      console.log('Animation:', clip.name, 'duration:', clip.duration, 'tracks:', clip.tracks.length)
-
-      // トラック名のサンプルを表示
-      const sampleTracks = clip.tracks.slice(0, 5).map(t => t.name)
-      console.log('Sample track names:', sampleTracks)
-
-      // ボーンがシーンツリー内で見つかるか確認
-      const rootBone = clonedScene.getObjectByName('root')
-      const pelvisBone = clonedScene.getObjectByName('pelvis')
-      console.log('Can find root bone:', !!rootBone, rootBone?.type)
-      console.log('Can find pelvis bone:', !!pelvisBone, pelvisBone?.type)
-
-      // SkinnedMeshからスケルトンのボーン名を取得
-      let firstSkeleton = null
-      clonedScene.traverse((child) => {
-        if (child.isSkinnedMesh && child.skeleton && !firstSkeleton) {
-          firstSkeleton = child.skeleton
-        }
-      })
-      if (firstSkeleton) {
-        console.log('Skeleton bone names:', firstSkeleton.bones.slice(0, 5).map(b => b.name))
-        // ボーンの親を確認
-        const rootInSkeleton = firstSkeleton.bones.find(b => b.name === 'root')
-        if (rootInSkeleton) {
-          console.log('Root bone parent:', rootInSkeleton.parent?.name, rootInSkeleton.parent?.type)
-        }
-      }
-
-      const action = mixer.clipAction(clip)
-      actionRef.current = action
-      action.setLoop(THREE.LoopRepeat)
-      action.play()
-      console.log('Animation started')
-    }
-
-    return () => {
-      mixer.stopAllAction()
-      mixerRef.current = null
-    }
-  }, [clonedScene, animations])
+  }, [actions, names])
 
   useEffect(() => {
     if (groupRef.current && onRef) {
@@ -123,25 +59,17 @@ export function Player({ onRef }) {
   }, [onRef])
 
   useFrame((state, delta) => {
-    // アニメーションミキサーを更新
-    if (mixerRef.current) {
-      mixerRef.current.update(delta)
-    }
-
     if (!groupRef.current || gameState !== 'playing') return
 
     const { moveX, moveZ } = input
     const moving = moveX !== 0 || moveZ !== 0
 
+    // 移動状態が変化した時にアニメーションを制御
     if (moving !== isMoving.current) {
       isMoving.current = moving
-
-      if (actionRef.current) {
-        if (moving) {
-          actionRef.current.paused = false
-        } else {
-          actionRef.current.paused = true
-        }
+      const jogAction = actions['Jog_Fwd_Loop']
+      if (jogAction) {
+        jogAction.paused = !moving
       }
     }
 
@@ -168,6 +96,7 @@ export function Player({ onRef }) {
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
       <primitive
+        ref={modelRef}
         object={clonedScene}
         scale={1}
         rotation={[0, Math.PI, 0]}
