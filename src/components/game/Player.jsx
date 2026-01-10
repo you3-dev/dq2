@@ -1,8 +1,7 @@
-import { useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
-import { SkeletonUtils } from 'three-stdlib'
 import { useGameStore } from '../../stores/gameStore'
 import { PLAYER_CONFIG } from '../../constants/config'
 import { getModelPath } from '../../utils/paths'
@@ -15,19 +14,15 @@ useGLTF.preload(PLAYER_MODEL_PATH)
 
 export function Player({ onRef }) {
   const groupRef = useRef()
-  const modelRef = useRef()
   const { input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState } = useGameStore()
   const velocity = useRef(new THREE.Vector3())
   const isMoving = useRef(false)
 
-  // GLTFモデルとアニメーションをロード
+  // GLTFモデルとアニメーションをロード（クローンせず直接使用）
   const { scene, animations } = useGLTF(PLAYER_MODEL_PATH)
 
-  // SkeletonUtils.clone()でスケルトン付きモデルを正しくクローン
-  const clone = useMemo(() => SkeletonUtils.clone(scene), [scene])
-
-  // アニメーション - modelRefを使用
-  const { actions, mixer } = useAnimations(animations, modelRef)
+  // アニメーション - sceneを直接使用
+  const { actions } = useAnimations(animations, scene)
 
   useEffect(() => {
     if (groupRef.current && onRef) {
@@ -38,23 +33,17 @@ export function Player({ onRef }) {
   // アニメーション制御
   useEffect(() => {
     console.log('Available animations:', Object.keys(actions))
-    console.log('Actions:', actions)
 
-    // Jog_Fwd_Loopをデフォルトで再生してみる（テスト）
+    // デフォルトでJog再生（テスト）
     const jogAction = actions['Jog_Fwd_Loop']
     if (jogAction) {
-      console.log('Playing Jog_Fwd_Loop')
-      jogAction.reset().play()
+      console.log('Starting Jog_Fwd_Loop animation')
+      jogAction.play()
     }
   }, [actions])
 
   useFrame((state, delta) => {
     if (!groupRef.current || gameState !== 'playing') return
-
-    // アニメーションミキサーを更新
-    if (mixer) {
-      mixer.update(delta)
-    }
 
     const { moveX, moveZ } = input
     const moving = moveX !== 0 || moveZ !== 0
@@ -105,8 +94,7 @@ export function Player({ onRef }) {
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
       <primitive
-        ref={modelRef}
-        object={clone}
+        object={scene}
         scale={1}
         rotation={[0, Math.PI, 0]}
         castShadow
