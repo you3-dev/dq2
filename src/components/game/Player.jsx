@@ -16,6 +16,8 @@ export function Player({ onRef }) {
   const groupRef = useRef()
   const mixerRef = useRef(null)
   const actionRef = useRef(null)
+  const frameCount = useRef(0)
+  const rootBoneRef = useRef(null)
   const { input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState } = useGameStore()
   const velocity = useRef(new THREE.Vector3())
   const isMoving = useRef(false)
@@ -56,6 +58,13 @@ export function Player({ onRef }) {
       // PropertyBindingの解決を確認
       const testBone = scene.getObjectByName('root')
       console.log('Can find root bone in scene:', !!testBone, testBone?.uuid?.substring(0, 8))
+      rootBoneRef.current = testBone
+
+      // ボーンの初期状態を記録
+      if (testBone) {
+        console.log('Initial root bone position:', testBone.position.x, testBone.position.y, testBone.position.z)
+        console.log('Initial root bone rotation:', testBone.rotation.x, testBone.rotation.y, testBone.rotation.z)
+      }
 
       const action = mixer.clipAction(clip)
       actionRef.current = action
@@ -84,6 +93,15 @@ export function Player({ onRef }) {
     // アニメーションミキサーを更新
     if (mixerRef.current) {
       mixerRef.current.update(delta)
+
+      // 30フレームごとにボーンの変換を確認
+      frameCount.current++
+      if (frameCount.current % 30 === 0 && rootBoneRef.current) {
+        const bone = rootBoneRef.current
+        console.log('Root bone transform:',
+          'pos:', bone.position.x.toFixed(3), bone.position.y.toFixed(3), bone.position.z.toFixed(3),
+          'rot:', bone.rotation.x.toFixed(3), bone.rotation.y.toFixed(3), bone.rotation.z.toFixed(3))
+      }
     }
 
     if (!groupRef.current || gameState !== 'playing') return
