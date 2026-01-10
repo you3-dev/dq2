@@ -105,10 +105,13 @@ export function EnemyGroup({ enemies = [] }) {
 }
 
 // デフォルトの敵配置（テスト用）
+// GLTFモデルは基本サイズが大きいので、scaleを小さく設定
 export const DEFAULT_ENEMIES = [
-  { type: 'slime', position: [10, 0, 10], scale: 0.8, wanderRadius: 4 },
-  { type: 'slime_pink', position: [-8, 0, 12], scale: 0.7, wanderRadius: 3 },
-  { type: 'slime', position: [15, 0, -8], scale: 0.9, wanderRadius: 5 },
-  { type: 'slime_spiky', position: [-12, 0, -10], scale: 0.8, wanderRadius: 4 },
-  { type: 'mushroom', position: [20, 0, 5], scale: 0.8, wanderRadius: 3 },
+  { type: 'slime', position: [25, 0, 25], scale: 0.15, wanderRadius: 4 },
+  { type: 'slime_pink', position: [-20, 0, 28], scale: 0.12, wanderRadius: 3 },
+  { type: 'slime', position: [30, 0, -20], scale: 0.18, wanderRadius: 5 },
+  { type: 'slime_spiky', position: [-25, 0, -25], scale: 0.1, wanderRadius: 4 },
+  { type: 'mushroom', position: [35, 0, 15], scale: 0.2, wanderRadius: 3 },
+  { type: 'slime_pink', position: [-30, 0, 10], scale: 0.14, wanderRadius: 3 },
+  { type: 'slime', position: [20, 0, -30], scale: 0.16, wanderRadius: 4 },
 ]

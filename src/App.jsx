@@ -47,7 +47,9 @@ function Game() {
       <World />
 
       {/* 敵キャラクター */}
-      <EnemyGroup enemies={DEFAULT_ENEMIES} />
+      <Suspense fallback={null}>
+        <EnemyGroup enemies={DEFAULT_ENEMIES} />
+      </Suspense>
 
       {/* NPC */}
       <NPC
