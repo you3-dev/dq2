@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
@@ -7,7 +7,7 @@ import { PLAYER_CONFIG } from '../../constants/config'
 import { getModelPath } from '../../utils/paths'
 
 // プレイヤーモデルのパス
-const PLAYER_MODEL_PATH = getModelPath('characters/Female_Ranger.gltf')
+const PLAYER_MODEL_PATH = getModelPath('characters/Knight_Male.gltf')
 
 // モデルをプリロード
 useGLTF.preload(PLAYER_MODEL_PATH)
@@ -15,9 +15,8 @@ useGLTF.preload(PLAYER_MODEL_PATH)
 export function Player({ onRef }) {
   const groupRef = useRef()
   const mixerRef = useRef(null)
-  const actionRef = useRef(null)
-  const frameCount = useRef(0)
-  const rootBoneRef = useRef(null)
+  const actionsRef = useRef({})
+  const currentActionRef = useRef('Idle')
   const { input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState } = useGameStore()
   const velocity = useRef(new THREE.Vector3())
   const isMoving = useRef(false)
@@ -25,61 +24,47 @@ export function Player({ onRef }) {
   // GLTFモデルとアニメーションをロード
   const { scene, animations } = useGLTF(PLAYER_MODEL_PATH)
 
-  // 手動でAnimationMixerをセットアップ
+  // AnimationMixerとアクションのセットアップ
   useEffect(() => {
     if (!scene || animations.length === 0) return
 
-    console.log('Setting up AnimationMixer manually')
-    console.log('Scene:', scene.name, scene.type)
-    console.log('Animations:', animations.map(a => a.name))
+    console.log('Setting up Player animations')
 
-    // SkinnedMeshを見つけてスケルトン情報を確認
-    let skinnedMesh = null
-    scene.traverse((child) => {
-      if (child.isSkinnedMesh && !skinnedMesh) {
-        skinnedMesh = child
-        console.log('Found SkinnedMesh:', child.name)
-        console.log('Skeleton bones:', child.skeleton?.bones.length)
-        console.log('Skeleton root:', child.skeleton?.bones[0]?.name)
-      }
-    })
-
-    // AnimationMixerを作成（シーン全体をルートに）
+    // AnimationMixerを作成
     const mixer = new THREE.AnimationMixer(scene)
     mixerRef.current = mixer
 
-    // アニメーションクリップを取得
-    const clip = animations.find(c => c.name === 'Jog_Fwd_Loop') || animations[0]
-    if (clip) {
-      console.log('Using clip:', clip.name, 'duration:', clip.duration)
-      console.log('Track count:', clip.tracks.length)
-      console.log('First track:', clip.tracks[0]?.name)
+    // 利用可能なアニメーション: Run, Idle
+    const runClip = animations.find(c => c.name === 'Run') || animations.find(c => c.name.includes('Run'))
+    const idleClip = animations.find(c => c.name === 'Idle') || animations.find(c => c.name.includes('Idle'))
 
-      // PropertyBindingの解決を確認
-      const testBone = scene.getObjectByName('root')
-      console.log('Can find root bone in scene:', !!testBone, testBone?.uuid?.substring(0, 8))
-      rootBoneRef.current = testBone
+    const actions = {}
 
-      // ボーンの初期状態を記録
-      if (testBone) {
-        console.log('Initial root bone position:', testBone.position.x, testBone.position.y, testBone.position.z)
-        console.log('Initial root bone rotation:', testBone.rotation.x, testBone.rotation.y, testBone.rotation.z)
-      }
-
-      const action = mixer.clipAction(clip)
-      actionRef.current = action
+    if (runClip) {
+      const action = mixer.clipAction(runClip)
       action.setLoop(THREE.LoopRepeat)
-      action.clampWhenFinished = false
-      action.play()
+      actions['Run'] = action
+    }
 
-      console.log('Action created and playing')
-      console.log('Action isRunning:', action.isRunning())
+    if (idleClip) {
+      const action = mixer.clipAction(idleClip)
+      action.setLoop(THREE.LoopRepeat)
+      actions['Idle'] = action
+    }
+
+    actionsRef.current = actions
+
+    // 初期アニメーション再生
+    const startAnim = actions['Idle'] ? 'Idle' : (actions['Run'] ? 'Run' : null)
+    if (startAnim && actions[startAnim]) {
+      actions[startAnim].play()
+      currentActionRef.current = startAnim
     }
 
     return () => {
       mixer.stopAllAction()
       mixerRef.current = null
-      actionRef.current = null
+      actionsRef.current = {}
     }
   }, [scene, animations])
 
@@ -89,19 +74,29 @@ export function Player({ onRef }) {
     }
   }, [onRef])
 
+  // アニメーション切り替え関数
+  const fadeToAction = (name, duration = 0.2) => {
+    const previousName = currentActionRef.current
+    if (previousName === name) return
+
+    const actions = actionsRef.current
+    const previousAction = actions[previousName]
+    const activeAction = actions[name]
+
+    if (previousAction && activeAction) {
+      previousAction.fadeOut(duration)
+      activeAction.reset().fadeIn(duration).play()
+      currentActionRef.current = name
+    } else if (activeAction) {
+      activeAction.play()
+      currentActionRef.current = name
+    }
+  }
+
   useFrame((state, delta) => {
     // アニメーションミキサーを更新
     if (mixerRef.current) {
       mixerRef.current.update(delta)
-
-      // 30フレームごとにボーンの変換を確認
-      frameCount.current++
-      if (frameCount.current % 30 === 0 && rootBoneRef.current) {
-        const bone = rootBoneRef.current
-        console.log('Root bone transform:',
-          'pos:', bone.position.x.toFixed(3), bone.position.y.toFixed(3), bone.position.z.toFixed(3),
-          'rot:', bone.rotation.x.toFixed(3), bone.rotation.y.toFixed(3), bone.rotation.z.toFixed(3))
-      }
     }
 
     if (!groupRef.current || gameState !== 'playing') return
@@ -112,8 +107,10 @@ export function Player({ onRef }) {
     // 移動状態が変化した時にアニメーションを制御
     if (moving !== isMoving.current) {
       isMoving.current = moving
-      if (actionRef.current) {
-        actionRef.current.paused = !moving
+      if (moving) {
+        fadeToAction('Run', 0.2)
+      } else {
+        fadeToAction('Idle', 0.2)
       }
     }
 
