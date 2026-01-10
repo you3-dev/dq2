@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ['main']
+    branches: ['claude/dq-style-3d-game-9kvrh']
   workflow_dispatch:
 
 permissions:
