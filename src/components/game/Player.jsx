@@ -139,7 +139,7 @@ export function Player({ onRef }) {
       <primitive
         object={scene}
         scale={1}
-        rotation={[0, Math.PI, 0]}
+        rotation={[0, 0, 0]}
         castShadow
         receiveShadow
       />
