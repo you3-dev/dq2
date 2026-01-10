@@ -1,6 +1,17 @@
-import { useRef } from 'react'
-import * as THREE from 'three'
+import { useRef, Suspense, useMemo } from 'react'
+import { useGLTF } from '@react-three/drei'
 import { WORLD_CONFIG } from '../../constants/config'
+
+// GLTFモデルをプリロード
+useGLTF.preload('/models/environment/fantasy-town/tree.glb')
+useGLTF.preload('/models/environment/fantasy-town/tree-high.glb')
+useGLTF.preload('/models/environment/fantasy-town/rock-large.glb')
+useGLTF.preload('/models/environment/fantasy-town/rock-small.glb')
+useGLTF.preload('/models/environment/fantasy-town/wall-door.glb')
+useGLTF.preload('/models/environment/fantasy-town/roof-gable.glb')
+useGLTF.preload('/models/environment/fantasy-town/windmill.glb')
+useGLTF.preload('/models/environment/fantasy-town/stall-green.glb')
+useGLTF.preload('/models/environment/fantasy-town/fountain-round.glb')
 
 export function World() {
   return (
@@ -9,9 +20,12 @@ export function World() {
       <Ground />
 
       {/* 環境オブジェクト */}
-      <Trees />
-      <Rocks />
-      <Buildings />
+      <Suspense fallback={null}>
+        <Trees />
+        <Rocks />
+        <VillageBuildings />
+        <Decorations />
+      </Suspense>
     </group>
   )
 }
@@ -22,150 +36,219 @@ function Ground() {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
       <planeGeometry args={[size, size, 32, 32]} />
-      <meshStandardMaterial color="#4a7c4e" />
+      <meshStandardMaterial color="#5a8f5a" />
     </mesh>
   )
 }
 
+// GLTFモデルの木
+function GLTFTree({ position, scale = 1, rotation = 0 }) {
+  const { scene } = useGLTF('/models/environment/fantasy-town/tree.glb')
+  const clonedScene = useMemo(() => scene.clone(), [scene])
+
+  return (
+    <primitive
+      object={clonedScene}
+      position={position}
+      scale={scale}
+      rotation={[0, rotation, 0]}
+      castShadow
+      receiveShadow
+    />
+  )
+}
+
+function GLTFTreeHigh({ position, scale = 1, rotation = 0 }) {
+  const { scene } = useGLTF('/models/environment/fantasy-town/tree-high.glb')
+  const clonedScene = useMemo(() => scene.clone(), [scene])
+
+  return (
+    <primitive
+      object={clonedScene}
+      position={position}
+      scale={scale}
+      rotation={[0, rotation, 0]}
+      castShadow
+      receiveShadow
+    />
+  )
+}
+
 function Trees() {
-  // ランダムに木を配置
   const treePositions = [
-    [5, 0, -8],
-    [-7, 0, -5],
-    [10, 0, 5],
-    [-12, 0, 10],
-    [8, 0, 15],
-    [-5, 0, -15],
-    [15, 0, -3],
-    [-10, 0, -12],
-    [3, 0, 20],
-    [-18, 0, 5],
+    { pos: [8, 0, -10], scale: 1.2, type: 'normal' },
+    { pos: [-10, 0, -8], scale: 1.0, type: 'high' },
+    { pos: [15, 0, 5], scale: 1.3, type: 'normal' },
+    { pos: [-15, 0, 12], scale: 1.1, type: 'high' },
+    { pos: [12, 0, 18], scale: 1.0, type: 'normal' },
+    { pos: [-8, 0, -18], scale: 1.4, type: 'high' },
+    { pos: [20, 0, -5], scale: 1.2, type: 'normal' },
+    { pos: [-18, 0, -15], scale: 1.0, type: 'normal' },
+    { pos: [5, 0, 25], scale: 1.3, type: 'high' },
+    { pos: [-22, 0, 8], scale: 1.1, type: 'normal' },
+    { pos: [25, 0, 15], scale: 1.0, type: 'high' },
+    { pos: [-12, 0, 22], scale: 1.2, type: 'normal' },
   ]
 
   return (
     <group>
-      {treePositions.map((pos, index) => (
-        <Tree key={index} position={pos} />
+      {treePositions.map((tree, index) => (
+        tree.type === 'high' ? (
+          <GLTFTreeHigh
+            key={index}
+            position={tree.pos}
+            scale={tree.scale}
+            rotation={Math.random() * Math.PI * 2}
+          />
+        ) : (
+          <GLTFTree
+            key={index}
+            position={tree.pos}
+            scale={tree.scale}
+            rotation={Math.random() * Math.PI * 2}
+          />
+        )
       ))}
     </group>
   )
 }
 
-function Tree({ position }) {
-  const trunkHeight = 1.5 + Math.random() * 0.5
-  const leavesRadius = 1.2 + Math.random() * 0.4
+// GLTFモデルの岩
+function GLTFRock({ position, scale = 1, type = 'large' }) {
+  const modelPath = type === 'large'
+    ? '/models/environment/fantasy-town/rock-large.glb'
+    : '/models/environment/fantasy-town/rock-small.glb'
+  const { scene } = useGLTF(modelPath)
+  const clonedScene = useMemo(() => scene.clone(), [scene])
 
   return (
-    <group position={position}>
-      {/* 幹 */}
-      <mesh position={[0, trunkHeight / 2, 0]} castShadow>
-        <cylinderGeometry args={[0.2, 0.3, trunkHeight, 8]} />
-        <meshStandardMaterial color="#8B4513" />
-      </mesh>
-
-      {/* 葉 */}
-      <mesh position={[0, trunkHeight + leavesRadius * 0.6, 0]} castShadow>
-        <coneGeometry args={[leavesRadius, leavesRadius * 2, 8]} />
-        <meshStandardMaterial color="#228B22" />
-      </mesh>
-    </group>
+    <primitive
+      object={clonedScene}
+      position={position}
+      scale={scale}
+      rotation={[0, Math.random() * Math.PI * 2, 0]}
+      castShadow
+      receiveShadow
+    />
   )
 }
 
 function Rocks() {
   const rockPositions = [
-    [12, 0, 8],
-    [-8, 0, 12],
-    [6, 0, -12],
-    [-15, 0, -8],
-    [20, 0, 0],
+    { pos: [18, 0, 10], scale: 1.0, type: 'large' },
+    { pos: [-12, 0, 15], scale: 0.8, type: 'small' },
+    { pos: [8, 0, -18], scale: 1.2, type: 'large' },
+    { pos: [-20, 0, -10], scale: 0.7, type: 'small' },
+    { pos: [25, 0, -2], scale: 0.9, type: 'large' },
+    { pos: [-5, 0, 28], scale: 1.1, type: 'small' },
   ]
 
   return (
     <group>
-      {rockPositions.map((pos, index) => (
-        <Rock key={index} position={pos} scale={0.8 + Math.random() * 0.6} />
+      {rockPositions.map((rock, index) => (
+        <GLTFRock
+          key={index}
+          position={rock.pos}
+          scale={rock.scale}
+          type={rock.type}
+        />
       ))}
     </group>
   )
 }
 
-function Rock({ position, scale = 1 }) {
+// 村の建物（GLTFモデル）
+function VillageHouse({ position, rotation = 0, scale = 1 }) {
+  const wallModel = useGLTF('/models/environment/fantasy-town/wall-door.glb')
+  const roofModel = useGLTF('/models/environment/fantasy-town/roof-gable.glb')
+
+  const wallScene = useMemo(() => wallModel.scene.clone(), [wallModel.scene])
+  const roofScene = useMemo(() => roofModel.scene.clone(), [roofModel.scene])
+
   return (
-    <mesh position={[position[0], position[1] + 0.3 * scale, position[2]]} scale={scale} castShadow>
-      <dodecahedronGeometry args={[0.5, 0]} />
-      <meshStandardMaterial color="#808080" roughness={0.8} />
-    </mesh>
+    <group position={position} rotation={[0, rotation, 0]} scale={scale}>
+      <primitive object={wallScene} position={[0, 0, 0]} castShadow receiveShadow />
+      <primitive object={roofScene} position={[0, 2, 0]} castShadow receiveShadow />
+    </group>
   )
 }
 
-function Buildings() {
+function Windmill({ position, rotation = 0, scale = 1 }) {
+  const { scene } = useGLTF('/models/environment/fantasy-town/windmill.glb')
+  const clonedScene = useMemo(() => scene.clone(), [scene])
+
+  return (
+    <primitive
+      object={clonedScene}
+      position={position}
+      rotation={[0, rotation, 0]}
+      scale={scale}
+      castShadow
+      receiveShadow
+    />
+  )
+}
+
+function Stall({ position, rotation = 0, scale = 1 }) {
+  const { scene } = useGLTF('/models/environment/fantasy-town/stall-green.glb')
+  const clonedScene = useMemo(() => scene.clone(), [scene])
+
+  return (
+    <primitive
+      object={clonedScene}
+      position={position}
+      rotation={[0, rotation, 0]}
+      scale={scale}
+      castShadow
+      receiveShadow
+    />
+  )
+}
+
+function Fountain({ position, scale = 1 }) {
+  const { scene } = useGLTF('/models/environment/fantasy-town/fountain-round.glb')
+  const clonedScene = useMemo(() => scene.clone(), [scene])
+
+  return (
+    <primitive
+      object={clonedScene}
+      position={position}
+      scale={scale}
+      castShadow
+      receiveShadow
+    />
+  )
+}
+
+function VillageBuildings() {
   return (
     <group>
-      {/* 村の家 */}
-      <House position={[-20, 0, -20]} rotation={[0, Math.PI / 4, 0]} />
-      <House position={[-25, 0, -15]} rotation={[0, -Math.PI / 6, 0]} />
+      {/* 村の中心部 - 噴水 */}
+      <Fountain position={[0, 0, 0]} scale={1.5} />
 
-      {/* 塔 */}
-      <Tower position={[25, 0, 25]} />
+      {/* 風車（村のシンボル） */}
+      <Windmill position={[-15, 0, -20]} rotation={Math.PI / 4} scale={1.2} />
+
+      {/* 家々 */}
+      <VillageHouse position={[-8, 0, -12]} rotation={Math.PI / 6} scale={1.5} />
+      <VillageHouse position={[10, 0, -15]} rotation={-Math.PI / 4} scale={1.3} />
+      <VillageHouse position={[-12, 0, 8]} rotation={Math.PI / 3} scale={1.4} />
+      <VillageHouse position={[15, 0, 10]} rotation={-Math.PI / 6} scale={1.2} />
+
+      {/* 屋台 */}
+      <Stall position={[5, 0, -5]} rotation={Math.PI / 2} scale={1.0} />
+      <Stall position={[-5, 0, 5]} rotation={-Math.PI / 2} scale={1.0} />
     </group>
   )
 }
 
-function House({ position, rotation = [0, 0, 0] }) {
+function Decorations() {
+  // 道を表現するための追加装飾
   return (
-    <group position={position} rotation={rotation}>
-      {/* 壁 */}
-      <mesh position={[0, 1.5, 0]} castShadow>
-        <boxGeometry args={[4, 3, 4]} />
-        <meshStandardMaterial color="#DEB887" />
-      </mesh>
-
-      {/* 屋根 */}
-      <mesh position={[0, 3.5, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
-        <coneGeometry args={[3.5, 2, 4]} />
-        <meshStandardMaterial color="#8B0000" />
-      </mesh>
-
-      {/* ドア */}
-      <mesh position={[0, 0.8, 2.01]} castShadow>
-        <boxGeometry args={[1, 1.6, 0.1]} />
-        <meshStandardMaterial color="#5c3317" />
-      </mesh>
-
-      {/* 窓 */}
-      <mesh position={[1.2, 1.5, 2.01]} castShadow>
-        <boxGeometry args={[0.6, 0.6, 0.1]} />
-        <meshStandardMaterial color="#87CEEB" />
-      </mesh>
-    </group>
-  )
-}
-
-function Tower({ position }) {
-  return (
-    <group position={position}>
-      {/* 塔本体 */}
-      <mesh position={[0, 5, 0]} castShadow>
-        <cylinderGeometry args={[2, 2.5, 10, 8]} />
-        <meshStandardMaterial color="#A9A9A9" />
-      </mesh>
-
-      {/* 塔の屋根 */}
-      <mesh position={[0, 11, 0]} castShadow>
-        <coneGeometry args={[2.5, 3, 8]} />
-        <meshStandardMaterial color="#4169E1" />
-      </mesh>
-
-      {/* 旗 */}
-      <mesh position={[0, 13.5, 0]} castShadow>
-        <cylinderGeometry args={[0.05, 0.05, 2, 8]} />
-        <meshStandardMaterial color="#5c3317" />
-      </mesh>
-      <mesh position={[0.4, 14, 0]} castShadow>
-        <boxGeometry args={[0.8, 0.5, 0.05]} />
-        <meshStandardMaterial color="#FF4500" />
-      </mesh>
+    <group>
+      {/* 村の入口付近のランタン風オブジェクト */}
+      <pointLight position={[0, 3, -8]} intensity={0.5} color="#ffaa44" distance={10} />
+      <pointLight position={[0, 3, 8]} intensity={0.5} color="#ffaa44" distance={10} />
     </group>
   )
 }

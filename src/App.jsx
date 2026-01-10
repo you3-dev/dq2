@@ -5,6 +5,7 @@ import { Player } from './components/game/Player'
 import { Camera } from './components/game/Camera'
 import { World } from './components/game/World'
 import { NPC } from './components/game/NPC'
+import { EnemyGroup, DEFAULT_ENEMIES } from './components/game/Enemy'
 import { HUD } from './components/ui/HUD'
 import { VirtualJoystick } from './components/ui/VirtualJoystick'
 import { CameraControl } from './components/ui/CameraControl'
@@ -44,6 +45,9 @@ function Game() {
 
       {/* ワールド */}
       <World />
+
+      {/* 敵キャラクター */}
+      <EnemyGroup enemies={DEFAULT_ENEMIES} />
 
       {/* NPC */}
       <NPC
