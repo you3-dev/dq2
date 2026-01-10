@@ -26,31 +26,77 @@ export function Player({ onRef }) {
   // AnimationMixerをセットアップ
   useEffect(() => {
     if (scene && animations.length > 0) {
-      // Armatureを探す（ボーンの親）
+      // Armatureとその子ボーンを探す
       let armature = null
+      const boneNames = []
+
       scene.traverse((child) => {
-        if (child.name === 'Armature' && child.type === 'Object3D') {
+        if (child.name === 'Armature') {
           armature = child
+        }
+        if (child.isBone) {
+          boneNames.push(child.name)
         }
       })
 
-      if (!armature) {
-        console.warn('Armature not found, using scene')
-        armature = scene
-      }
+      console.log('Armature found:', !!armature)
+      console.log('Bone names in model:', boneNames.slice(0, 10))
 
-      console.log('Using armature as mixer root:', armature.name)
-
-      // ミキサーをArmatureに対して作成
-      const mixer = new THREE.AnimationMixer(armature)
-      mixerRef.current = mixer
-
+      // アニメーションのトラック名を取得
       const jogClip = animations.find(clip => clip.name === 'Jog_Fwd_Loop')
       if (jogClip) {
-        const action = mixer.clipAction(jogClip)
+        const trackBoneNames = jogClip.tracks.map(t => t.name.split('.')[0])
+        const uniqueTrackBones = [...new Set(trackBoneNames)]
+        console.log('Track bone names:', uniqueTrackBones.slice(0, 10))
+
+        // ボーン名がマッチするかチェック
+        const firstTrackBone = uniqueTrackBones[0]
+        const foundInModel = boneNames.includes(firstTrackBone)
+        console.log(`First track bone "${firstTrackBone}" found in model:`, foundInModel)
+
+        // もしマッチしない場合、トラック名を修正
+        if (!foundInModel && armature) {
+          console.log('Trying to remap animation tracks...')
+
+          // Armatureの最初の子を探す
+          let rootBone = null
+          armature.traverse((child) => {
+            if (child.isBone && !rootBone) {
+              rootBone = child
+            }
+          })
+
+          if (rootBone) {
+            console.log('Root bone in armature:', rootBone.name)
+          }
+        }
+      }
+
+      // ミキサーをシーン全体に対して作成（パス解決のため）
+      const mixer = new THREE.AnimationMixer(scene)
+      mixerRef.current = mixer
+
+      if (jogClip) {
+        // アニメーショントラックのパスを修正
+        const modifiedClip = jogClip.clone()
+        modifiedClip.tracks = jogClip.tracks.map(track => {
+          const newTrack = track.clone()
+          // トラック名を "Armature.ボーン名.プロパティ" に変更
+          const parts = track.name.split('.')
+          if (parts.length >= 2) {
+            const boneName = parts[0]
+            const property = parts.slice(1).join('.')
+            newTrack.name = `Armature.${boneName}.${property}`
+          }
+          return newTrack
+        })
+
+        console.log('Modified track example:', modifiedClip.tracks[0]?.name)
+
+        const action = mixer.clipAction(modifiedClip)
         actionRef.current = action
         action.play()
-        console.log('Animation playing on Armature')
+        console.log('Animation started with modified tracks')
       }
     }
 
@@ -78,7 +124,6 @@ export function Player({ onRef }) {
     const { moveX, moveZ } = input
     const moving = moveX !== 0 || moveZ !== 0
 
-    // 移動状態が変わったらアニメーション切り替え
     if (moving !== isMoving.current) {
       isMoving.current = moving
 
@@ -91,7 +136,6 @@ export function Player({ onRef }) {
       }
     }
 
-    // 入力がある場合のみ移動
     if (moving) {
       const moveAngle = Math.atan2(moveX, moveZ) + cameraAngle
       const speed = PLAYER_CONFIG.moveSpeed * delta
