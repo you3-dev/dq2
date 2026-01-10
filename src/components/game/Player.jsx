@@ -1,8 +1,7 @@
-import { useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
-import { SkeletonUtils } from 'three-stdlib'
 import { useGameStore } from '../../stores/gameStore'
 import { PLAYER_CONFIG } from '../../constants/config'
 import { getModelPath } from '../../utils/paths'
@@ -15,22 +14,16 @@ useGLTF.preload(PLAYER_MODEL_PATH)
 
 export function Player({ onRef }) {
   const groupRef = useRef()
-  const modelRef = useRef()
   const { input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState } = useGameStore()
   const velocity = useRef(new THREE.Vector3())
   const isMoving = useRef(false)
 
   // GLTFモデルとアニメーションをロード
+  // クローンせず元のシーンを直接使用（アニメーションが元のボーンにバインドされているため）
   const { scene, animations } = useGLTF(PLAYER_MODEL_PATH)
 
-  // SkeletonUtils.cloneでスケルトンごと正しくクローン
-  const clonedScene = useMemo(() => {
-    const clone = SkeletonUtils.clone(scene)
-    return clone
-  }, [scene])
-
-  // useAnimationsフックでアニメーションをセットアップ
-  const { actions, names, mixer } = useAnimations(animations, modelRef)
+  // useAnimationsフックでアニメーションをセットアップ（元のシーンを直接参照）
+  const { actions, names } = useAnimations(animations, scene)
 
   // デバッグとアニメーション開始
   useEffect(() => {
@@ -96,8 +89,7 @@ export function Player({ onRef }) {
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
       <primitive
-        ref={modelRef}
-        object={clonedScene}
+        object={scene}
         scale={1}
         rotation={[0, Math.PI, 0]}
         castShadow
