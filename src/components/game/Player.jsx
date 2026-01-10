@@ -7,7 +7,7 @@ import { PLAYER_CONFIG } from '../../constants/config'
 import { getModelPath } from '../../utils/paths'
 
 // プレイヤーモデルのパス
-const PLAYER_MODEL_PATH = getModelPath('characters/Viking_Male.gltf')
+const PLAYER_MODEL_PATH = getModelPath('characters/Knight_Golden_Male.gltf')
 
 // モデルをプリロード
 useGLTF.preload(PLAYER_MODEL_PATH)
