@@ -1,7 +1,8 @@
 import { useRef, useEffect, useMemo } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useGraph } from '@react-three/fiber'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import * as THREE from 'three'
+import { SkeletonUtils } from 'three-stdlib'
 import { useGameStore } from '../../stores/gameStore'
 import { PLAYER_CONFIG } from '../../constants/config'
 import { getModelPath } from '../../utils/paths'
@@ -20,8 +21,12 @@ export function Player({ onRef }) {
 
   // GLTFモデルとアニメーションをロード
   const { scene, animations } = useGLTF(PLAYER_MODEL_PATH)
-  const clonedScene = useMemo(() => scene.clone(), [scene])
-  const { actions } = useAnimations(animations, clonedScene)
+
+  // SkeletonUtils.clone()でスケルトン付きモデルを正しくクローン
+  const clone = useMemo(() => SkeletonUtils.clone(scene), [scene])
+
+  // アニメーション用のref
+  const { actions } = useAnimations(animations, clone)
 
   useEffect(() => {
     if (groupRef.current && onRef) {
@@ -31,8 +36,13 @@ export function Player({ onRef }) {
 
   // アニメーション制御
   useEffect(() => {
-    // 利用可能なアニメーションをログ出力（デバッグ用）
     console.log('Available animations:', Object.keys(actions))
+
+    // 初期状態でIdleアニメーションがあれば再生
+    const idleAction = actions['Idle'] || actions['idle']
+    if (idleAction) {
+      idleAction.play()
+    }
   }, [actions])
 
   useFrame((state, delta) => {
@@ -87,8 +97,8 @@ export function Player({ onRef }) {
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
       <primitive
-        object={clonedScene}
-        scale={0.8}
+        object={clone}
+        scale={1}
         rotation={[0, Math.PI, 0]}
         castShadow
         receiveShadow
