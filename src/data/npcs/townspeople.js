@@ -26,7 +26,7 @@ export const startingTownNPCs = {
     dialogId: 'elder_thomas_dialog',
     questIds: ['main_quest_01'],
     modelPath: 'characters/OldClassy_Male.gltf',
-    scale: 1.1,
+    scale: 0.5,
     portrait: 'textures/portraits/elder_thomas.png',
   }),
 
@@ -47,6 +47,7 @@ export const startingTownNPCs = {
       { itemId: 'leather_shield', stock: -1 },
     ],
     modelPath: 'characters/Soldier_Male.gltf', // 腕利きっぽく
+    scale: 0.5,
     portrait: 'textures/portraits/merchant_bran.png',
   }),
 
@@ -67,6 +68,7 @@ export const startingTownNPCs = {
       { itemId: 'wing_of_wyvern', stock: 5 },
     ],
     modelPath: 'characters/Casual_Female.gltf',
+    scale: 0.5,
     portrait: 'textures/portraits/merchant_lina.png',
   }),
 
@@ -86,6 +88,7 @@ export const startingTownNPCs = {
       saveGame: true,
     },
     modelPath: 'characters/Casual2_Female.gltf',
+    scale: 0.5,
     portrait: 'textures/portraits/innkeeper_martha.png',
   }),
 
@@ -106,6 +109,7 @@ export const startingTownNPCs = {
     ],
     dialogId: 'hint_dialog_01',
     modelPath: 'characters/Casual3_Male.gltf',
+    scale: 0.5,
   }),
 
   // Guard NPC
@@ -122,7 +126,7 @@ export const startingTownNPCs = {
       requiredQuest: 'main_quest_01',
     },
     modelPath: 'characters/BlueSoldier_Male.gltf',
-    scale: 1.2,
+    scale: 0.55,
     portrait: 'textures/portraits/guard_rex.png',
   }),
 };

@@ -14,11 +14,19 @@ const MODEL_PATHS = {
   treeHigh: getModelPath('environment/fantasy-town/tree-high.glb'),
   rockLarge: getModelPath('environment/fantasy-town/rock-large.glb'),
   rockSmall: getModelPath('environment/fantasy-town/rock-small.glb'),
+  wall: getModelPath('environment/fantasy-town/wall.glb'),
   wallDoor: getModelPath('environment/fantasy-town/wall-door.glb'),
+  wallWindow: getModelPath('environment/fantasy-town/wall-window-glass.glb'),
+  roof: getModelPath('environment/fantasy-town/roof.glb'),
   roofGable: getModelPath('environment/fantasy-town/roof-gable.glb'),
   windmill: getModelPath('environment/fantasy-town/windmill.glb'),
   stallGreen: getModelPath('environment/fantasy-town/stall-green.glb'),
+  stallRed: getModelPath('environment/fantasy-town/stall-red.glb'),
   fountainRound: getModelPath('environment/fantasy-town/fountain-round.glb'),
+  barrel: getModelPath('environment/retro-medieval-kit/detail-barrel.glb'),
+  crate: getModelPath('environment/retro-medieval-kit/detail-crate.glb'),
+  bench: getModelPath('environment/fantasy-town/stall-bench.glb'),
+  fence: getModelPath('environment/fantasy-town/fence.glb'),
 }
 
 // GLTFモデルをプリロード
@@ -29,12 +37,7 @@ export function World() {
   const mapData = useMemo(() => getMapById(currentMapId), [currentMapId])
   const npcs = useMemo(() => getNPCsByMapId(currentMapId), [currentMapId])
 
-  console.log(`World Rendering: map=${currentMapId}, npcCount=${npcs.length}`)
-
-  if (!mapData) {
-    console.error(`Map data not found for: ${currentMapId}`)
-    return null
-  }
+  if (!mapData) return null
 
   return (
     <group>
@@ -69,16 +72,6 @@ export function World() {
             scale={npc.scale || 1}
           />
         ))}
-
-        {/* デバッグ用ハードコードNPC */}
-        <NPC
-          position={[2, 0, 2]}
-          name="DEBUG_NPC"
-          dialog="default_dialog"
-          modelPath="characters/Casual_Male.gltf"
-          scale={1.5}
-          rotation={0}
-        />
 
         {/* マップ間の接続トリガー */}
         {Object.entries(mapData.connections || {}).map(([id, conn]) => (
@@ -221,18 +214,47 @@ function Rocks() {
   )
 }
 
-// 村の建物（GLTFモデル）
-function VillageHouse({ position, rotation = 0, scale = 1 }) {
-  const wallModel = useGLTF(MODEL_PATHS.wallDoor)
-  const roofModel = useGLTF(MODEL_PATHS.roofGable)
+// GLTFモデルの小道具
+function Prop({ modelName, position, rotation = 0, scale = 1 }) {
+  const { scene } = useGLTF(MODEL_PATHS[modelName])
+  const clonedScene = useMemo(() => scene.clone(), [scene])
+  return (
+    <primitive
+      object={clonedScene}
+      position={position}
+      rotation={[0, rotation, 0]}
+      scale={scale}
+      castShadow
+      receiveShadow
+    />
+  )
+}
 
-  const wallScene = useMemo(() => wallModel.scene.clone(), [wallModel.scene])
-  const roofScene = useMemo(() => roofModel.scene.clone(), [roofModel.scene])
+function Barrel(props) { return <Prop modelName="barrel" {...props} /> }
+function Crate(props) { return < Prop modelName="crate" {...props} /> }
+function Bench(props) { return <Prop modelName="bench" {...props} /> }
+function Fence(props) { return <Prop modelName="fence" {...props} /> }
+
+// 村の建物（モジュール式）
+function VillageHouse({ position, rotation = 0, scale = 1.5 }) {
+  const wallDoor = useGLTF(MODEL_PATHS.wallDoor)
+  const wallWindow = useGLTF(MODEL_PATHS.wallWindow)
+  const roof = useGLTF(MODEL_PATHS.roofGable)
+
+  const wallDoorScene = useMemo(() => wallDoor.scene.clone(), [wallDoor.scene])
+  const wallWindowScene = useMemo(() => wallWindow.scene.clone(), [wallWindow.scene])
+  const roofScene = useMemo(() => roof.scene.clone(), [roof.scene])
 
   return (
     <group position={position} rotation={[0, rotation, 0]} scale={scale}>
-      <primitive object={wallScene} position={[0, 0, 0]} castShadow receiveShadow />
-      <primitive object={roofScene} position={[0, 2, 0]} castShadow receiveShadow />
+      {/* 1階 */}
+      <primitive object={wallDoorScene} position={[0, 0, 0]} castShadow receiveShadow />
+      <primitive object={wallWindowScene} position={[2, 0, 0]} castShadow receiveShadow />
+      <primitive object={wallWindowScene} position={[-2, 0, 0]} castShadow receiveShadow />
+      <primitive object={wallWindowScene} position={[0, 0, -2]} castShadow receiveShadow />
+
+      {/* 屋根 */}
+      <primitive object={roofScene} position={[0, 2, 0]} scale={[1.1, 1, 1.1]} castShadow receiveShadow />
     </group>
   )
 }
@@ -253,8 +275,8 @@ function Windmill({ position, rotation = 0, scale = 1 }) {
   )
 }
 
-function Stall({ position, rotation = 0, scale = 1 }) {
-  const { scene } = useGLTF(MODEL_PATHS.stallGreen)
+function Stall({ position, rotation = 0, scale = 1, type = 'green' }) {
+  const { scene } = useGLTF(type === 'red' ? MODEL_PATHS.stallRed : MODEL_PATHS.stallGreen)
   const clonedScene = useMemo(() => scene.clone(), [scene])
 
   return (
@@ -289,19 +311,32 @@ function VillageBuildings() {
     <group>
       {/* 村の中心部 - 噴水 */}
       <Fountain position={[0, 0, 0]} scale={1.5} />
+      <Bench position={[4, 0, 0]} rotation={Math.PI / 2} scale={1.2} />
+      <Bench position={[-4, 0, 0]} rotation={-Math.PI / 2} scale={1.2} />
 
       {/* 風車（村のシンボル） */}
-      <Windmill position={[-15, 0, -20]} rotation={Math.PI / 4} scale={1.2} />
+      <Windmill position={[-18, 0, -25]} rotation={Math.PI / 4} scale={1.5} />
 
       {/* 家々 */}
-      <VillageHouse position={[-8, 0, -12]} rotation={Math.PI / 6} scale={1.5} />
-      <VillageHouse position={[10, 0, -15]} rotation={-Math.PI / 4} scale={1.3} />
-      <VillageHouse position={[-12, 0, 8]} rotation={Math.PI / 3} scale={1.4} />
-      <VillageHouse position={[15, 0, 10]} rotation={-Math.PI / 6} scale={1.2} />
+      <VillageHouse position={[-12, 0, -15]} rotation={Math.PI / 4} scale={1.5} />
+      <VillageHouse position={[15, 0, -18]} rotation={-Math.PI / 6} scale={1.5} />
+      <VillageHouse position={[-15, 0, 10]} rotation={Math.PI / 2} scale={1.5} />
+      <VillageHouse position={[18, 0, 12]} rotation={-Math.PI / 2} scale={1.5} />
 
-      {/* 屋台 */}
-      <Stall position={[5, 0, -5]} rotation={Math.PI / 2} scale={1.0} />
-      <Stall position={[-5, 0, 5]} rotation={-Math.PI / 2} scale={1.0} />
+      {/* 屋台（お店） */}
+      <Stall position={[8, 0, -5]} rotation={Math.PI / 2} scale={1.2} />
+      <Stall position={[-8, 0, 5]} rotation={-Math.PI / 2} scale={1.2} type="red" />
+
+      {/* 小道具の配置 */}
+      <Barrel position={[5, 0, -7]} scale={0.8} />
+      <Barrel position={[5.5, 0, -6.5]} scale={0.8} />
+      <Crate position={[-5, 0, 7]} scale={1.0} />
+      <Crate position={[-6, 0, 7.5]} rotation={Math.PI / 6} scale={1.0} />
+
+      {/* 境界の柵 */}
+      <Fence position={[0, 0, -48]} scale={2} />
+      <Fence position={[10, 0, -48]} scale={2} />
+      <Fence position={[-10, 0, -48]} scale={2} />
     </group>
   )
 }

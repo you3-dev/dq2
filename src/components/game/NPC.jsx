@@ -55,10 +55,6 @@ function NPCContent({ position, name, displayName, dialog, modelPath, scale = 1,
   // eslint-disable-next-line no-unused-vars
   const { nodes, materials } = useGraph(clonedScene)
 
-  useEffect(() => {
-    console.log(`NPC Rendered: ${displayName} at`, posArr)
-  }, [displayName, posArr])
-
   // アニメーションのセットアップ
   useEffect(() => {
     if (!clonedScene || !animations || animations.length === 0) return
@@ -122,11 +118,6 @@ function NPCContent({ position, name, displayName, dialog, modelPath, scale = 1,
         castShadow
         receiveShadow
       />
-      {/* デバッグ用の赤い枠線ボックス */}
-      <mesh position={[0, 1, 0]}>
-        <boxGeometry args={[0.8, 2, 0.8]} />
-        <meshBasicMaterial color="red" wireframe />
-      </mesh>
     </group>
   )
 }

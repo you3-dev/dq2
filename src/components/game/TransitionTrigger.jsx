@@ -32,7 +32,7 @@ export function TransitionTrigger({ position, size = [2, 2, 2], targetMapId, spa
 
     // デバッグ用（開発時は透明な立方体を表示など）
     return (
-        <mesh position={position} visible={true}>
+        <mesh position={position} visible={false}>
             <boxGeometry args={size} />
             <meshBasicMaterial color="yellow" wireframe transparent opacity={0.5} />
         </mesh>
