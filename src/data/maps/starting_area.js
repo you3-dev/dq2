@@ -23,7 +23,8 @@ export const townStart = createTownMap({
   spawnPoints: [
     { id: 'default', position: { x: 0, y: 0, z: 0 }, rotation: 0 },
     { id: 'from_field', position: { x: 0, y: 0, z: 45 }, rotation: 180, fromMapId: 'field_start' },
-    { id: 'from_inn', position: { x: 0, y: 0, z: -10 }, rotation: 0, fromMapId: 'inn_interior' },
+    { id: 'from_inn', position: { x: -5, y: 0, z: 5 }, rotation: 0, fromMapId: 'inn_interior' },
+    { id: 'from_elder_house', position: { x: 5, y: 0, z: 10 }, rotation: 0, fromMapId: 'elder_house_interior' },
   ],
   connections: {
     to_field: {
@@ -34,7 +35,13 @@ export const townStart = createTownMap({
     },
     to_inn: {
       targetMapId: 'inn_interior',
-      entryPoint: { x: 0, y: 0, z: 2 },
+      entryPoint: { x: -8, y: 0, z: 5 },
+      entryRotation: 0,
+      transitionType: 'door',
+    },
+    to_elder_house: {
+      targetMapId: 'elder_house_interior',
+      entryPoint: { x: 8, y: 0, z: 12 },
       entryRotation: 0,
       transitionType: 'door',
     },
@@ -263,11 +270,75 @@ export const caveBeginner = createDungeonMap({
   allowEscape: true,
 });
 
+/**
+ * Inn Interior
+ */
+export const innInterior = createMapDefinition({
+  id: 'inn_interior',
+  name: '宿屋',
+  nameEn: 'Alefgard Inn',
+  type: MapType.TOWN, // or custom INTERIOR type if added
+  description: '旅の疲れを癒やす宿屋。暖かい暖炉がある。',
+  model: {
+    path: 'models/environment/inn_interior.glb', // Placeholder if not exist, will fallback
+    scale: 1,
+  },
+  spawnPoints: [
+    { id: 'default', position: { x: 0, y: 0, z: -5 }, rotation: 0 },
+    { id: 'from_town', position: { x: 0, y: 0, z: -5 }, rotation: 0, fromMapId: 'town_start' },
+  ],
+  connections: {
+    to_town: {
+      targetMapId: 'town_start',
+      entryPoint: { x: 0, y: 0, z: -8 }, // Exit point inside
+      spawnPointId: 'from_inn',
+      transitionType: 'door',
+    },
+  },
+  npcIds: ['innkeeper_martha'],
+  environment: {
+    lighting: {
+      ambient: '#ffaa44',
+      ambientIntensity: 0.8,
+    },
+  },
+});
+
+/**
+ * Elder's House Interior
+ */
+export const elderHouseInterior = createMapDefinition({
+  id: 'elder_house_interior',
+  name: '長老の家',
+  nameEn: 'Elder\'s House',
+  type: MapType.TOWN,
+  description: '村の長老、トーマスの家。古い書物が並んでいる。',
+  model: {
+    path: 'models/environment/elder_house_interior.glb',
+    scale: 1,
+  },
+  spawnPoints: [
+    { id: 'default', position: { x: 0, y: 0, z: -5 }, rotation: 0 },
+    { id: 'from_town', position: { x: 0, y: 0, z: -5 }, rotation: 0, fromMapId: 'town_start' },
+  ],
+  connections: {
+    to_town: {
+      targetMapId: 'town_start',
+      entryPoint: { x: 0, y: 0, z: -8 },
+      spawnPointId: 'from_elder_house',
+      transitionType: 'door',
+    },
+  },
+  npcIds: ['elder_thomas'],
+});
+
 // Export all starting area maps
 export const startingAreaMaps = {
   town_start: townStart,
   field_start: fieldStart,
   cave_beginner: caveBeginner,
+  inn_interior: innInterior,
+  elder_house_interior: elderHouseInterior,
 };
 
 // Export map by ID lookup

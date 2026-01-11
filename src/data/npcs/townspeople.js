@@ -21,7 +21,7 @@ export const startingTownNPCs = {
     nameEn: 'Elder Thomas',
     type: 'sage',
     defaultMapId: 'town_start',
-    defaultPosition: { x: 5, y: 0, z: 10 },
+    defaultPosition: { x: 12, y: 0, z: -18 }, // 長老の家の前
     defaultRotation: 180,
     dialogId: 'elder_thomas_dialog',
     questIds: ['main_quest_01'],
@@ -36,7 +36,7 @@ export const startingTownNPCs = {
     name: '武器屋ブラン',
     nameEn: 'Bran the Weaponsmith',
     defaultMapId: 'town_start',
-    defaultPosition: { x: -8, y: 0, z: 5 },
+    defaultPosition: { x: -8, y: 0, z: 2 }, // 屋台の前
     defaultRotation: 90,
     dialogId: 'weapon_shop_dialog',
     shopInventory: [
@@ -57,7 +57,7 @@ export const startingTownNPCs = {
     name: '道具屋リナ',
     nameEn: 'Lina the Merchant',
     defaultMapId: 'town_start',
-    defaultPosition: { x: 8, y: 0, z: -5 },
+    defaultPosition: { x: 8, y: 0, z: -5 }, // 屋台の前
     defaultRotation: 270,
     dialogId: 'item_shop_dialog',
     shopInventory: [
@@ -78,8 +78,8 @@ export const startingTownNPCs = {
     name: '宿屋マーサ',
     nameEn: 'Martha the Innkeeper',
     defaultMapId: 'town_start',
-    defaultPosition: { x: 0, y: 0, z: -10 },
-    defaultRotation: 0,
+    defaultPosition: { x: -15, y: 0, z: -8 }, // 宿屋の前
+    defaultRotation: 180,
     dialogId: 'inn_dialog',
     innService: {
       pricePerPerson: 10,

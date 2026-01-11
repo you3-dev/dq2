@@ -138,7 +138,7 @@ export function Player({ onRef }) {
     <group ref={groupRef} position={[0, 0, 0]}>
       <primitive
         object={scene}
-        scale={1}
+        scale={0.5}
         rotation={[0, 0, 0]}
         castShadow
         receiveShadow
