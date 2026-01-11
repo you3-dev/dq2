@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
@@ -15,9 +15,18 @@ useGLTF.preload(PLAYER_MODEL_PATH)
 export function Player({ onRef }) {
   const groupRef = useRef()
   const mixerRef = useRef(null)
+  const raycaster = useMemo(() => new THREE.Raycaster(), [])
+  const downVector = useMemo(() => new THREE.Vector3(0, -1, 0), [])
+  const groundRayPos = useMemo(() => new THREE.Vector3(), [])
+  const groundMeshesRef = useRef([])
   const actionsRef = useRef({})
   const currentActionRef = useRef('Idle')
-  const { player, input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState } = useGameStore()
+  const { player, input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState, currentMapId, colliders } = useGameStore()
+
+  // プレイヤーのAABBサイズ
+  const playerSize = useMemo(() => new THREE.Vector3(0.8, 1.8, 0.8), [])
+  const playerAABB = useMemo(() => new THREE.Box3(), [])
+  const nextPosition = useMemo(() => new THREE.Vector3(), [])
   const velocity = useRef(new THREE.Vector3())
   const isMoving = useRef(false)
 
@@ -28,13 +37,9 @@ export function Player({ onRef }) {
   useEffect(() => {
     if (!scene || animations.length === 0) return
 
-    console.log('Setting up Player animations')
-
-    // AnimationMixerを作成
     const mixer = new THREE.AnimationMixer(scene)
     mixerRef.current = mixer
 
-    // 利用可能なアニメーション: Run, Idle
     const runClip = animations.find(c => c.name === 'Run') || animations.find(c => c.name.includes('Run'))
     const idleClip = animations.find(c => c.name === 'Idle') || animations.find(c => c.name.includes('Idle'))
 
@@ -54,7 +59,6 @@ export function Player({ onRef }) {
 
     actionsRef.current = actions
 
-    // 初期アニメーション再生
     const startAnim = actions['Idle'] ? 'Idle' : (actions['Run'] ? 'Run' : null)
     if (startAnim && actions[startAnim]) {
       actions[startAnim].play()
@@ -70,7 +74,7 @@ export function Player({ onRef }) {
 
   useEffect(() => {
     if (groupRef.current && onRef) {
-      onRef(groupRef)
+      onRef(groupRef.current)
     }
   }, [onRef])
 
@@ -81,6 +85,11 @@ export function Player({ onRef }) {
       groupRef.current.rotation.y = player.rotation
     }
   }, [player.position[0], player.position[1], player.position[2], player.rotation])
+
+  // マップ変更時にgroundキャッシュをクリア
+  useEffect(() => {
+    groundMeshesRef.current = []
+  }, [currentMapId])
 
   // アニメーション切り替え関数
   const fadeToAction = (name, duration = 0.2) => {
@@ -102,7 +111,6 @@ export function Player({ onRef }) {
   }
 
   useFrame((state, delta) => {
-    // アニメーションミキサーを更新
     if (mixerRef.current) {
       mixerRef.current.update(delta)
     }
@@ -112,7 +120,6 @@ export function Player({ onRef }) {
     const { moveX, moveZ } = input
     const moving = moveX !== 0 || moveZ !== 0
 
-    // 移動状態が変化した時にアニメーションを制御
     if (moving !== isMoving.current) {
       isMoving.current = moving
       if (moving) {
@@ -122,6 +129,27 @@ export function Player({ onRef }) {
       }
     }
 
+    // 地面メッシュをキャッシュ（初回またはマップ変更時のみ検索）
+    if (groundMeshesRef.current.length === 0) {
+      const meshes = []
+      state.scene.traverse((obj) => {
+        if (obj.name === 'ground' && (obj.isMesh || obj.isGroup)) {
+          meshes.push(obj)
+        }
+      })
+      groundMeshesRef.current = meshes
+    }
+
+    // 地面の高さに合わせる (Snapping) - キャッシュしたgroundのみ対象
+    const rayOriginY = 10
+    groundRayPos.set(groupRef.current.position.x, rayOriginY, groupRef.current.position.z)
+    raycaster.set(groundRayPos, downVector)
+
+    const intersects = raycaster.intersectObjects(groundMeshesRef.current, true)
+    if (intersects.length > 0) {
+      groupRef.current.position.y = intersects[0].point.y
+    }
+
     if (moving) {
       const moveAngle = Math.atan2(moveX, moveZ) + cameraAngle
       const speed = PLAYER_CONFIG.moveSpeed * delta
@@ -129,8 +157,27 @@ export function Player({ onRef }) {
       velocity.current.x = Math.sin(moveAngle) * speed
       velocity.current.z = Math.cos(moveAngle) * speed
 
-      groupRef.current.position.x += velocity.current.x
-      groupRef.current.position.z += velocity.current.z
+      // 移動先の位置を計算
+      nextPosition.set(
+        groupRef.current.position.x + velocity.current.x,
+        groupRef.current.position.y,
+        groupRef.current.position.z + velocity.current.z
+      )
+
+      // AABB衝突チェック
+      playerAABB.setFromCenterAndSize(nextPosition, playerSize)
+      let canMove = true
+      for (const collider of colliders) {
+        if (playerAABB.intersectsBox(collider.box3)) {
+          canMove = false
+          break
+        }
+      }
+
+      if (canMove) {
+        groupRef.current.position.x = nextPosition.x
+        groupRef.current.position.z = nextPosition.z
+      }
       groupRef.current.rotation.y = moveAngle
 
       updatePlayerPosition([
@@ -139,6 +186,13 @@ export function Player({ onRef }) {
         groupRef.current.position.z,
       ])
       updatePlayerRotation(moveAngle)
+    } else {
+      // 動いていない時も高さを同期
+      updatePlayerPosition([
+        groupRef.current.position.x,
+        groupRef.current.position.y,
+        groupRef.current.position.z,
+      ])
     }
   })
 
@@ -147,7 +201,6 @@ export function Player({ onRef }) {
       <primitive
         object={scene}
         scale={0.5}
-        rotation={[0, 0, 0]}
         castShadow
         receiveShadow
       />

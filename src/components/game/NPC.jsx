@@ -25,7 +25,15 @@ export function NPC(props) {
         <meshBasicMaterial color="blue" wireframe />
       </mesh>
     }>
-      <NPCContent {...props} displayName={displayName} />
+      <NPCContent
+        position={props.position}
+        name={props.name}
+        displayName={displayName}
+        dialog={props.dialog}
+        modelPath={props.modelPath}
+        scale={props.scale}
+        rotation={props.rotation}
+      />
     </Suspense>
   )
 }
@@ -35,6 +43,9 @@ function NPCContent({ position, name, displayName, dialog, modelPath, scale = 1,
   const { input, openDialog, player, gameState } = useGameStore()
   const wasActionPressed = useRef(false)
   const mixerRef = useRef(null)
+  const raycaster = useMemo(() => new THREE.Raycaster(), [])
+  const downVector = useMemo(() => new THREE.Vector3(0, -1, 0), [])
+  const groundRayPos = useMemo(() => new THREE.Vector3(), [])
 
   // データの正規化
   const posArr = useMemo(() => {
@@ -105,6 +116,21 @@ function NPCContent({ position, name, displayName, dialog, modelPath, scale = 1,
         player.position[2] - posArr[2]
       )
       groupRef.current.rotation.y = angle
+    }
+
+    // 地面の高さに合わせる (Snapping)
+    const rayOriginY = 10
+    groundRayPos.set(groupRef.current.position.x, rayOriginY, groupRef.current.position.z)
+    raycaster.set(groundRayPos, downVector)
+
+    const intersects = raycaster.intersectObjects(state.scene.children, true)
+    const groundHit = intersects.find(hit =>
+      hit.object.name === 'ground' ||
+      (hit.object.parent && hit.object.parent.name === 'ground')
+    )
+
+    if (groundHit) {
+      groupRef.current.position.y = groundHit.point.y
     }
   })
 

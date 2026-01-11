@@ -101,4 +101,14 @@ export const useGameStore = create((set, get) => ({
   setInput: (input) => set((state) => ({
     input: { ...state.input, ...input }
   })),
+
+  // コライダー管理（Phase 2: AABB衝突検出）
+  colliders: [],
+  registerCollider: (id, box3) => set((state) => ({
+    colliders: [...state.colliders.filter(c => c.id !== id), { id, box3 }]
+  })),
+  unregisterCollider: (id) => set((state) => ({
+    colliders: state.colliders.filter(c => c.id !== id)
+  })),
+  clearColliders: () => set({ colliders: [] }),
 }))

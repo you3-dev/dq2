@@ -1,5 +1,6 @@
-import { useRef, Suspense, useMemo } from 'react'
+import { useRef, Suspense, useMemo, useEffect } from 'react'
 import { useGLTF, Instances, Instance } from '@react-three/drei'
+import * as THREE from 'three'
 import { WORLD_CONFIG } from '../../constants/config'
 import { getModelPath } from '../../utils/paths'
 import { useGameStore } from '../../stores/gameStore'
@@ -40,6 +41,11 @@ export function World() {
   const currentMapId = useGameStore(state => state.currentMapId)
   const mapData = useMemo(() => getMapById(currentMapId), [currentMapId])
   const npcs = useMemo(() => getNPCsByMapId(currentMapId), [currentMapId])
+
+  // マップ変更時にコライダーをクリア
+  useEffect(() => {
+    useGameStore.getState().clearColliders()
+  }, [currentMapId])
 
   if (!mapData) return null
 
@@ -96,7 +102,7 @@ export function World() {
 function Ground({ color }) {
   const size = 600
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+    <mesh name="ground" rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
       <planeGeometry args={[size, size]} />
       <meshStandardMaterial color={color} />
     </mesh>
@@ -159,7 +165,7 @@ function TiledGround() {
   if (!floorMesh) return <Ground color="#5a8f5a" />
 
   return (
-    <group>
+    <group name="ground">
       <Ground color="#5a8f5a" />
       <Instances range={tiles.length} geometry={floorMesh.geometry} material={floorMesh.material}>
         {tiles.map((pos, i) => (
@@ -176,6 +182,28 @@ function Prop({ modelPath, position, rotation = 0, scale = 1 }) {
   const clonedScene = useMemo(() => scene.clone(), [scene])
   return (
     <primitive object={clonedScene} position={position} rotation={[0, rotation, 0]} scale={scale} castShadow receiveShadow />
+  )
+}
+
+// 噴水用コンポーネント（コライダー付き）
+function Fountain({ position, scale = 1 }) {
+  const { scene } = useGLTF(MODEL_PATHS.fountain)
+  const clonedScene = useMemo(() => scene.clone(), [scene])
+
+  useEffect(() => {
+    // 噴水のAABBを登録（円形なので少し大きめに設定）
+    const box3 = new THREE.Box3()
+    const center = new THREE.Vector3(position[0], position[1] + 1, position[2])
+    const size = new THREE.Vector3(4.5 * scale, 2, 4.5 * scale)
+    box3.setFromCenterAndSize(center, size)
+    useGameStore.getState().registerCollider('fountain', box3)
+
+    return () => useGameStore.getState().unregisterCollider('fountain')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position[0], position[1], position[2], scale])
+
+  return (
+    <primitive object={clonedScene} position={position} scale={scale} castShadow receiveShadow />
   )
 }
 
@@ -243,7 +271,7 @@ function VillageBuildings() {
   return (
     <group>
       {/* 広場 */}
-      <Prop modelPath={MODEL_PATHS.fountain} position={[0, 0.4, 0]} scale={2.8} />
+      <Fountain position={[0, 0.4, 0]} scale={2.8} />
       <Prop modelPath={MODEL_PATHS.bench} position={[8, 0.05, 0]} rotation={Math.PI / 2} scale={1.8} />
       <Prop modelPath={MODEL_PATHS.bench} position={[-8, 0.05, 0]} rotation={-Math.PI / 2} scale={1.8} />
 

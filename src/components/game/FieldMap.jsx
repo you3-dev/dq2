@@ -1,8 +1,6 @@
 import { useRef, useMemo, Suspense } from 'react'
 import { useGameStore } from '../../stores/gameStore'
-import { useGLTF, Instances, Instance, Sky, Environment, Cloud } from '@react-three/drei'
-import { Canvas } from '@react-three/fiber'
-import { Physics, RigidBody } from '@react-three/rapier'
+import { useGLTF, Instances, Instance, Sky, Cloud } from '@react-three/drei'
 import * as THREE from 'three'
 import { TransitionTrigger } from './TransitionTrigger'
 import { NPC } from './NPC'
@@ -58,14 +56,31 @@ export function FieldMap() {
     )
 }
 
+const getHeight = (x, z) => {
+    // 地面の起伏計算ロジック（Groundコンポーネントと同期させる）
+    return Math.sin(x * 0.05) * Math.cos(z * 0.05) * 2 +
+        Math.sin(x * 0.1) * 0.5
+}
+
 function Ground() {
+    const size = 500
+    const segments = 100
+    const geometry = useMemo(() => {
+        const geo = new THREE.PlaneGeometry(size, size, segments, segments)
+        const vertices = geo.attributes.position.array
+        for (let i = 0; i < vertices.length; i += 3) {
+            const x = vertices[i]
+            const y = vertices[i + 1]
+            vertices[i + 2] = getHeight(x, -y)
+        }
+        geo.computeVertexNormals()
+        return geo
+    }, [])
+
     return (
-        <RigidBody type="fixed" colliders="hull" friction={1}>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
-                <planeGeometry args={[1000, 1000]} />
-                <meshStandardMaterial color="#5a8f5a" />
-            </mesh>
-        </RigidBody>
+        <mesh name="ground" geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+            <meshStandardMaterial color="#5a8f5a" flatShading={false} />
+        </mesh>
     )
 }
 
@@ -78,26 +93,23 @@ function NatureInstances() {
     // Instance Data Generation
     const treeData = useMemo(() => {
         const instances = []
-        // Forest loop
         for (let i = 0; i < 300; i++) {
-            const r = 30 + Math.random() * 120 // Distance from center
+            const r = 30 + Math.random() * 120
             const theta = Math.random() * Math.PI * 2
-
             const x = r * Math.cos(theta)
             const z = r * Math.sin(theta)
 
-            // Safety: Ensure spawn point (0, 0, 50) and path to town (0, 0, 60) are clear
             const dx = x - 0
             const dz = z - 50
             const distToSpawn = Math.sqrt(dx * dx + dz * dz)
 
-            // Also clear the center slightly
             if (r < 40 && Math.abs(z) < 10 && Math.abs(x) < 10) continue;
+            if (distToSpawn < 15) continue;
 
-            if (distToSpawn < 15) continue; // 15 unit radius clear around spawn
+            const y = getHeight(x, z)
 
             instances.push({
-                position: [x, 0, z],
+                position: [x, y, z],
                 rotation: [0, Math.random() * Math.PI * 2, 0],
                 scale: 1 + Math.random() * 0.8
             })
@@ -108,10 +120,11 @@ function NatureInstances() {
     const grassData = useMemo(() => {
         const instances = []
         for (let i = 0; i < 2000; i++) {
-            const x = (Math.random() - 0.5) * 200
-            const z = (Math.random() - 0.5) * 200
+            const x = (Math.random() - 0.5) * 300
+            const z = (Math.random() - 0.5) * 300
+            const y = getHeight(x, z)
             instances.push({
-                position: [x, 0, z],
+                position: [x, y, z],
                 rotation: [0, Math.random() * Math.PI, 0],
                 scale: 0.8 + Math.random() * 0.4
             })
