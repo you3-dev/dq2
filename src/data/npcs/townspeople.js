@@ -36,7 +36,7 @@ export const startingTownNPCs = {
     name: '武器屋ブラン',
     nameEn: 'Bran the Weaponsmith',
     defaultMapId: 'town_start',
-    defaultPosition: { x: -8, y: 0, z: 2 }, // 屋台の前
+    defaultPosition: { x: -10, y: 0, z: 2 }, // 赤い屋台の前
     defaultRotation: 90,
     dialogId: 'weapon_shop_dialog',
     shopInventory: [
@@ -57,7 +57,7 @@ export const startingTownNPCs = {
     name: '道具屋リナ',
     nameEn: 'Lina the Merchant',
     defaultMapId: 'town_start',
-    defaultPosition: { x: 8, y: 0, z: -5 }, // 屋台の前
+    defaultPosition: { x: 10, y: 0, z: -3 }, // 緑の屋台の前
     defaultRotation: 270,
     dialogId: 'item_shop_dialog',
     shopInventory: [
