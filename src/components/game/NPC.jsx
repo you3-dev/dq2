@@ -1,14 +1,46 @@
 import { useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { useGLTF } from '@react-three/drei'
+import * as THREE from 'three'
 import { useGameStore } from '../../stores/gameStore'
 
-export function NPC({ position, name, dialog, color = '#e74c3c' }) {
-  const meshRef = useRef()
+export function NPC({ position, name, dialog, modelPath, scale = 1, rotation = 0 }) {
+  const groupRef = useRef()
   const { input, openDialog, player, gameState } = useGameStore()
   const wasActionPressed = useRef(false)
+  const mixerRef = useRef(null)
 
-  useFrame(() => {
-    if (!meshRef.current) return
+  // GLTFモデルの読み込み（modelPathが指定されている場合のみ）
+  const { scene, animations } = useGLTF(modelPath || null)
+
+  // アニメーションのセットアップ
+  useEffect(() => {
+    if (!scene || !animations || animations.length === 0) return
+
+    const mixer = new THREE.AnimationMixer(scene)
+    mixerRef.current = mixer
+
+    // Idleアニメーションを探して再生
+    const idleClip = animations.find(c => c.name === 'Idle') || animations.find(c => c.name.includes('Idle')) || animations[0]
+
+    if (idleClip) {
+      const action = mixer.clipAction(idleClip)
+      action.play()
+    }
+
+    return () => {
+      mixer.stopAllAction()
+      mixerRef.current = null
+    }
+  }, [scene, animations])
+
+  useFrame((state, delta) => {
+    // アニメーション更新
+    if (mixerRef.current) {
+      mixerRef.current.update(delta)
+    }
+
+    if (!groupRef.current) return
 
     // プレイヤーとの距離を計算
     const distance = Math.sqrt(
@@ -25,39 +57,32 @@ export function NPC({ position, name, dialog, color = '#e74c3c' }) {
     wasActionPressed.current = input.action
 
     // NPCをプレイヤーの方向に向ける（近くにいる時）
+    // ※回転オフセットを考慮して調整
     if (distance < 5 && distance > 0) {
       const angle = Math.atan2(
         player.position[0] - position[0],
         player.position[2] - position[2]
       )
-      meshRef.current.rotation.y = angle
+      // モデルが元々180度回転している場合などはここで調整が必要だが、
+      // 一旦そのまま適用し、必要ならpropでオフセットを受け取るようにする
+      groupRef.current.rotation.y = angle
     }
   })
 
+  // モデル読み込み中のフォールバック（またはエラー時）
+  if (!modelPath) return null
+
   return (
-    <group ref={meshRef} position={position}>
-      {/* 体 */}
-      <mesh position={[0, 0.5, 0]} castShadow>
-        <capsuleGeometry args={[0.3, 0.6, 8, 16]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
+    <group ref={groupRef} position={position} rotation={[0, rotation, 0]}>
+      <primitive
+        object={scene}
+        scale={scale}
+        castShadow
+        receiveShadow
+      />
 
-      {/* 頭 */}
-      <mesh position={[0, 1.2, 0]} castShadow>
-        <sphereGeometry args={[0.25, 16, 16]} />
-        <meshStandardMaterial color="#f5c6a5" />
-      </mesh>
-
-      {/* 目印（前方向） */}
-      <mesh position={[0, 1.2, -0.3]} castShadow>
-        <sphereGeometry args={[0.05, 8, 8]} />
-        <meshStandardMaterial color="#333" />
-      </mesh>
-
-      {/* 名前表示用のビルボード（オプション） */}
-      <sprite position={[0, 2, 0]} scale={[2, 0.5, 1]}>
-        <spriteMaterial transparent opacity={0} />
-      </sprite>
+      {/* 名前表示用のビルボード（デバッグ用などで必要なら戻す） */}
+      {/* <DialogIndicator position={[0, 2.5, 0]} /> */}
     </group>
   )
 }

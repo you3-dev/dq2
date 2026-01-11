@@ -14,6 +14,7 @@ import { Dialog } from './components/ui/Dialog'
 import { Menu } from './components/ui/Menu'
 import { usePlayerControls } from './hooks/usePlayerControls'
 import { WORLD_CONFIG } from './constants/config'
+import { getModelPath } from './utils/paths'
 
 function Game() {
   const playerRef = useRef()
@@ -53,22 +54,25 @@ function Game() {
 
       {/* NPC */}
       <NPC
-        position={[5, 0.5, 5]}
+        position={[5, 0, 5]}
         name="村人A"
         dialog="ようこそ、旅の方。この村は平和な場所じゃ。"
-        color="#2ecc71"
+        modelPath={getModelPath('characters/Casual_Male.gltf')}
+        scale={1.2}
       />
       <NPC
-        position={[-5, 0.5, 8]}
+        position={[-5, 0, 8]}
         name="商人"
         dialog="何かお探しですか？武器や防具、道具など取り揃えております。"
-        color="#9b59b6"
+        modelPath={getModelPath('characters/Worker_Male.gltf')}
+        scale={1.2}
       />
       <NPC
-        position={[0, 0.5, -10]}
+        position={[0, 0, -10]}
         name="兵士"
         dialog="この先は危険だ。魔物がうろついている。気をつけろ！"
-        color="#e74c3c"
+        modelPath={getModelPath('characters/Soldier_Male.gltf')}
+        scale={1.2}
       />
     </>
   )
