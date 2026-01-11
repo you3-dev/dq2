@@ -12,6 +12,7 @@ import { CameraControl } from './components/ui/CameraControl'
 import { ActionButton } from './components/ui/ActionButton'
 import { Dialog } from './components/ui/Dialog'
 import { Menu } from './components/ui/Menu'
+import { FadeTransition } from './components/ui/FadeTransition'
 import { usePlayerControls } from './hooks/usePlayerControls'
 import { WORLD_CONFIG } from './constants/config'
 import { getModelPath } from './utils/paths'
@@ -51,29 +52,6 @@ function Game() {
       <Suspense fallback={null}>
         <EnemyGroup enemies={DEFAULT_ENEMIES} />
       </Suspense>
-
-      {/* NPC */}
-      <NPC
-        position={[5, 0, 5]}
-        name="村人A"
-        dialog="ようこそ、旅の方。この村は平和な場所じゃ。"
-        modelPath={getModelPath('characters/Casual_Male.gltf')}
-        scale={1.2}
-      />
-      <NPC
-        position={[-5, 0, 8]}
-        name="商人"
-        dialog="何かお探しですか？武器や防具、道具など取り揃えております。"
-        modelPath={getModelPath('characters/Worker_Male.gltf')}
-        scale={1.2}
-      />
-      <NPC
-        position={[0, 0, -10]}
-        name="兵士"
-        dialog="この先は危険だ。魔物がうろついている。気をつけろ！"
-        modelPath={getModelPath('characters/Soldier_Male.gltf')}
-        scale={1.2}
-      />
     </>
   )
 }
@@ -90,6 +68,7 @@ function GameUI() {
       <ActionButton />
       <Dialog />
       <Menu />
+      <FadeTransition />
     </>
   )
 }

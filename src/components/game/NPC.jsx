@@ -1,27 +1,74 @@
-import { useRef, useEffect } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useRef, useEffect, useMemo, Suspense } from 'react'
+import { useFrame, useGraph } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { SkeletonUtils } from 'three-stdlib'
 import { useGameStore } from '../../stores/gameStore'
+import { getModelPath } from '../../utils/paths'
 
-export function NPC({ position, name, dialog, modelPath, scale = 1, rotation = 0 }) {
+/**
+ * NPCのラッパーコンポーネント
+ */
+export function NPC(props) {
+  const { modelPath, name } = props
+  if (!modelPath) {
+    console.warn(`NPC with missing modelPath: ${name}`)
+    return null
+  }
+
+  const displayName = typeof name === 'object' ? (name.ja || name.en || '???') : name
+
+  return (
+    <Suspense fallback={
+      <mesh position={props.position ? [props.position.x || props.position[0], 1, props.position.z || props.position[2]] : [0, 0, 0]}>
+        <boxGeometry args={[0.5, 2, 0.5]} />
+        <meshBasicMaterial color="blue" wireframe />
+      </mesh>
+    }>
+      <NPCContent {...props} displayName={displayName} />
+    </Suspense>
+  )
+}
+
+function NPCContent({ position, name, displayName, dialog, modelPath, scale = 1, rotation = 0 }) {
   const groupRef = useRef()
   const { input, openDialog, player, gameState } = useGameStore()
   const wasActionPressed = useRef(false)
   const mixerRef = useRef(null)
 
-  // GLTFモデルの読み込み（modelPathが指定されている場合のみ）
-  const { scene, animations } = useGLTF(modelPath || null)
+  // データの正規化
+  const posArr = useMemo(() => {
+    return Array.isArray(position) ? position : [position.x, position.y, position.z]
+  }, [position])
+
+  const fullModelPath = useMemo(() => {
+    return modelPath.startsWith('/models/') ? modelPath : getModelPath(modelPath)
+  }, [modelPath])
+
+  // GLTFモデルの読み込み
+  const { scene, animations } = useGLTF(fullModelPath)
+
+  // SkinnedMesh対応のクローン
+  const clonedScene = useMemo(() => SkeletonUtils.clone(scene), [scene])
+
+  // クローンしたシーン内のノードにアクセスしやすくする（アニメーション等用）
+  // eslint-disable-next-line no-unused-vars
+  const { nodes, materials } = useGraph(clonedScene)
+
+  useEffect(() => {
+    console.log(`NPC Rendered: ${displayName} at`, posArr)
+  }, [displayName, posArr])
 
   // アニメーションのセットアップ
   useEffect(() => {
-    if (!scene || !animations || animations.length === 0) return
+    if (!clonedScene || !animations || animations.length === 0) return
 
-    const mixer = new THREE.AnimationMixer(scene)
+    const mixer = new THREE.AnimationMixer(clonedScene)
     mixerRef.current = mixer
 
-    // Idleアニメーションを探して再生
-    const idleClip = animations.find(c => c.name === 'Idle') || animations.find(c => c.name.includes('Idle')) || animations[0]
+    const idleClip = animations.find(c => c.name === 'Idle') ||
+      animations.find(c => c.name.includes('Idle')) ||
+      animations[0]
 
     if (idleClip) {
       const action = mixer.clipAction(idleClip)
@@ -32,57 +79,54 @@ export function NPC({ position, name, dialog, modelPath, scale = 1, rotation = 0
       mixer.stopAllAction()
       mixerRef.current = null
     }
-  }, [scene, animations])
+  }, [clonedScene, animations])
 
   useFrame((state, delta) => {
-    // アニメーション更新
     if (mixerRef.current) {
       mixerRef.current.update(delta)
     }
 
     if (!groupRef.current) return
 
-    // プレイヤーとの距離を計算
     const distance = Math.sqrt(
-      Math.pow(player.position[0] - position[0], 2) +
-      Math.pow(player.position[2] - position[2], 2)
+      Math.pow(player.position[0] - posArr[0], 2) +
+      Math.pow(player.position[2] - posArr[2], 2)
     )
 
-    // アクションボタンが押された時
     if (input.action && !wasActionPressed.current && gameState === 'playing') {
       if (distance < 3) {
-        openDialog(name, dialog)
+        const dialogId = typeof dialog === 'object' ? (dialog.id || null) : dialog
+        if (dialogId) {
+          openDialog(displayName, dialogId)
+        }
       }
     }
     wasActionPressed.current = input.action
 
-    // NPCをプレイヤーの方向に向ける（近くにいる時）
-    // ※回転オフセットを考慮して調整
-    if (distance < 5 && distance > 0) {
+    if (distance < 5 && distance > 0.5) {
       const angle = Math.atan2(
-        player.position[0] - position[0],
-        player.position[2] - position[2]
+        player.position[0] - posArr[0],
+        player.position[2] - posArr[2]
       )
-      // モデルが元々180度回転している場合などはここで調整が必要だが、
-      // 一旦そのまま適用し、必要ならpropでオフセットを受け取るようにする
       groupRef.current.rotation.y = angle
     }
   })
 
-  // モデル読み込み中のフォールバック（またはエラー時）
-  if (!modelPath) return null
+  const rotationRad = useMemo(() => (rotation * Math.PI) / 180, [rotation])
 
   return (
-    <group ref={groupRef} position={position} rotation={[0, rotation, 0]}>
+    <group ref={groupRef} position={posArr} rotation={[0, rotationRad, 0]}>
       <primitive
-        object={scene}
+        object={clonedScene}
         scale={scale}
         castShadow
         receiveShadow
       />
-
-      {/* 名前表示用のビルボード（デバッグ用などで必要なら戻す） */}
-      {/* <DialogIndicator position={[0, 2.5, 0]} /> */}
+      {/* デバッグ用の赤い枠線ボックス */}
+      <mesh position={[0, 1, 0]}>
+        <boxGeometry args={[0.8, 2, 0.8]} />
+        <meshBasicMaterial color="red" wireframe />
+      </mesh>
     </group>
   )
 }

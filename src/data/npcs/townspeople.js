@@ -25,10 +25,8 @@ export const startingTownNPCs = {
     defaultRotation: 180,
     dialogId: 'elder_thomas_dialog',
     questIds: ['main_quest_01'],
-    model: {
-      path: 'models/npcs/elder.glb',
-      scale: 1.1,
-    },
+    modelPath: 'characters/OldClassy_Male.gltf',
+    scale: 1.1,
     portrait: 'textures/portraits/elder_thomas.png',
   }),
 
@@ -48,9 +46,7 @@ export const startingTownNPCs = {
       { itemId: 'wooden_staff', stock: -1 },
       { itemId: 'leather_shield', stock: -1 },
     ],
-    model: {
-      path: 'models/npcs/merchant_male.glb',
-    },
+    modelPath: 'characters/Soldier_Male.gltf', // 腕利きっぽく
     portrait: 'textures/portraits/merchant_bran.png',
   }),
 
@@ -70,9 +66,7 @@ export const startingTownNPCs = {
       { itemId: 'magic_water', stock: 10 },
       { itemId: 'wing_of_wyvern', stock: 5 },
     ],
-    model: {
-      path: 'models/npcs/merchant_female.glb',
-    },
+    modelPath: 'characters/Casual_Female.gltf',
     portrait: 'textures/portraits/merchant_lina.png',
   }),
 
@@ -91,9 +85,7 @@ export const startingTownNPCs = {
       cureStatus: true,
       saveGame: true,
     },
-    model: {
-      path: 'models/npcs/innkeeper.glb',
-    },
+    modelPath: 'characters/Casual2_Female.gltf',
     portrait: 'textures/portraits/innkeeper_martha.png',
   }),
 
@@ -113,9 +105,7 @@ export const startingTownNPCs = {
       { x: 12, y: 0, z: 12 },
     ],
     dialogId: 'hint_dialog_01',
-    model: {
-      path: 'models/npcs/villager_old_man.glb',
-    },
+    modelPath: 'characters/Casual3_Male.gltf',
   }),
 
   // Guard NPC
@@ -131,10 +121,8 @@ export const startingTownNPCs = {
     conditions: {
       requiredQuest: 'main_quest_01',
     },
-    model: {
-      path: 'models/npcs/guard_captain.glb',
-      scale: 1.2,
-    },
+    modelPath: 'characters/BlueSoldier_Male.gltf',
+    scale: 1.2,
     portrait: 'textures/portraits/guard_rex.png',
   }),
 };

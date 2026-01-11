@@ -2,6 +2,11 @@ import { useRef, Suspense, useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
 import { WORLD_CONFIG } from '../../constants/config'
 import { getModelPath } from '../../utils/paths'
+import { useGameStore } from '../../stores/gameStore'
+import { getMapById } from '../../data/maps'
+import { getNPCsByMapId } from '../../data/npcs'
+import { TransitionTrigger } from './TransitionTrigger'
+import { NPC } from './NPC'
 
 // モデルパス定義
 const MODEL_PATHS = {
@@ -20,32 +25,87 @@ const MODEL_PATHS = {
 Object.values(MODEL_PATHS).forEach(path => useGLTF.preload(path))
 
 export function World() {
+  const currentMapId = useGameStore(state => state.currentMapId)
+  const mapData = useMemo(() => getMapById(currentMapId), [currentMapId])
+  const npcs = useMemo(() => getNPCsByMapId(currentMapId), [currentMapId])
+
+  console.log(`World Rendering: map=${currentMapId}, npcCount=${npcs.length}`)
+
+  if (!mapData) {
+    console.error(`Map data not found for: ${currentMapId}`)
+    return null
+  }
+
   return (
     <group>
       {/* 地面 */}
-      <Ground />
+      <Ground color={mapData.type === 'field' ? '#4a7f4a' : '#5a8f5a'} />
 
       {/* 環境オブジェクト */}
       <Suspense fallback={null}>
-        <Trees />
-        <Rocks />
-        <VillageBuildings />
-        <Decorations />
+        {currentMapId === 'town_start' && (
+          <>
+            <VillageBuildings />
+            <Decorations />
+          </>
+        )}
+
+        {currentMapId === 'field_start' && (
+          <>
+            <Trees />
+            <Rocks />
+          </>
+        )}
+
+        {/* NPCの動的レンダリング */}
+        {npcs.map(npc => (
+          <NPC
+            key={npc.id}
+            position={npc.defaultPosition}
+            rotation={npc.defaultRotation}
+            name={npc.name}
+            dialog={npc.dialogId}
+            modelPath={npc.modelPath}
+            scale={npc.scale || 1}
+          />
+        ))}
+
+        {/* デバッグ用ハードコードNPC */}
+        <NPC
+          position={[2, 0, 2]}
+          name="DEBUG_NPC"
+          dialog="default_dialog"
+          modelPath="characters/Casual_Male.gltf"
+          scale={1.5}
+          rotation={0}
+        />
+
+        {/* マップ間の接続トリガー */}
+        {Object.entries(mapData.connections || {}).map(([id, conn]) => (
+          <TransitionTrigger
+            key={id}
+            position={[conn.entryPoint.x, conn.entryPoint.y + 1, conn.entryPoint.z]}
+            size={[3, 4, 3]}
+            targetMapId={conn.targetMapId}
+          />
+        ))}
       </Suspense>
     </group>
   )
 }
 
-function Ground() {
+function Ground({ color }) {
   const size = WORLD_CONFIG.groundSize
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
       <planeGeometry args={[size, size, 32, 32]} />
-      <meshStandardMaterial color="#5a8f5a" />
+      <meshStandardMaterial color={color} />
     </mesh>
   )
 }
+
+// ... 以降、既存のコンポーネント（GLTFTree, GLTFTreeHigh, Trees, GLTFRock, Rocks, VillageHouse, Windmill, Stall, Fountain, VillageBuildings, Decorations）を保持
 
 // GLTFモデルの木
 function GLTFTree({ position, scale = 1, rotation = 0 }) {

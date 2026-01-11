@@ -5,6 +5,34 @@ export const useGameStore = create((set, get) => ({
   gameState: 'playing', // 'playing', 'paused', 'menu', 'dialog', 'battle'
   setGameState: (state) => set({ gameState: state }),
 
+  // マップ状態
+  currentMapId: 'town_start',
+  isTransitioning: false,
+
+  switchMap: async (mapId, spawnPointId = 'default') => {
+    // ESM環境では require が使えないため動的 import を使用
+    const maps = await import('../data/maps/index.js')
+    const mapData = maps.getMapById(mapId)
+    if (!mapData) return
+
+    set({ isTransitioning: true })
+
+    // フェード演出のための時間を確保して切り替え
+    setTimeout(() => {
+      const spawnPoint = mapData.spawnPoints.find(p => p.id === spawnPointId) || mapData.spawnPoints[0]
+
+      set((state) => ({
+        currentMapId: mapId,
+        isTransitioning: false,
+        player: {
+          ...state.player,
+          position: [spawnPoint.position.x, spawnPoint.position.y, spawnPoint.position.z],
+          rotation: spawnPoint.rotation
+        }
+      }))
+    }, 500)
+  },
+
   // プレイヤー状態
   player: {
     position: [0, 0, 0],

@@ -79,9 +79,13 @@ export const createNPCDefinition = (config) => ({
   innService: config.innService ?? null,
   questIds: config.questIds ?? [],
   conditions: config.conditions ?? null,
+  // 3Dモデル情報 (既存のNPC.jsxが props.modelPath / props.scale を期待しているため、トップレベルにも配置)
+  modelPath: config.modelPath ?? config.model?.path ?? 'characters/Casual_Male.gltf',
+  scale: config.scale ?? config.model?.scale ?? 1,
+  // 互換性のためのmodelオブジェクト
   model: {
-    path: config.model?.path ?? 'models/npcs/villager.glb',
-    scale: config.model?.scale ?? 1,
+    path: config.modelPath ?? config.model?.path ?? 'characters/Casual_Male.gltf',
+    scale: config.scale ?? config.model?.scale ?? 1,
     animations: config.model?.animations ?? {
       idle: 'Idle',
       walk: 'Walk',
