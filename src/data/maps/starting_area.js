@@ -21,15 +21,15 @@ export const townStart = createTownMap({
   },
   bounds: { x: 100, y: 30, z: 100 },
   spawnPoints: [
-    { id: 'default', position: { x: 0, y: 0, z: 0 }, rotation: 0 },
-    { id: 'from_field', position: { x: 0, y: 0, z: 45 }, rotation: 180, fromMapId: 'field_start' },
+    { id: 'default', position: { x: 0, y: 0, z: 15 }, rotation: 180 },
+    { id: 'from_field', position: { x: 0, y: 0, z: 40 }, rotation: 180, fromMapId: 'field_start' },
     { id: 'from_inn', position: { x: -5, y: 0, z: 5 }, rotation: 0, fromMapId: 'inn_interior' },
     { id: 'from_elder_house', position: { x: 5, y: 0, z: 10 }, rotation: 0, fromMapId: 'elder_house_interior' },
   ],
   connections: {
     to_field: {
       targetMapId: 'field_start',
-      entryPoint: { x: 0, y: 0, z: -50 },
+      entryPoint: { x: 0, y: 0, z: 48 },
       entryRotation: 0,
       transitionType: 'fade',
     },
@@ -109,14 +109,14 @@ export const fieldStart = createMapDefinition({
   },
   bounds: { x: 500, y: 50, z: 500 },
   spawnPoints: [
-    { id: 'from_town', position: { x: 0, y: 0, z: -50 }, rotation: 180, fromMapId: 'town_start' },
+    { id: 'from_town', position: { x: 0, y: 0, z: 50 }, rotation: 0, fromMapId: 'town_start' },
     { id: 'from_cave', position: { x: 100, y: 0, z: 100 }, rotation: 90, fromMapId: 'cave_beginner' },
     { id: 'from_forest', position: { x: -100, y: 0, z: 150 }, rotation: 270, fromMapId: 'field_forest' },
   ],
   connections: {
     to_town: {
       targetMapId: 'town_start',
-      entryPoint: { x: 0, y: 0, z: 45 },
+      entryPoint: { x: 0, y: 0, z: 60 },
       entryRotation: 180,
       transitionType: 'fade',
     },

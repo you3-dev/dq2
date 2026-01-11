@@ -7,6 +7,7 @@ import { getMapById } from '../../data/maps'
 import { getNPCsByMapId } from '../../data/npcs'
 import { TransitionTrigger } from './TransitionTrigger'
 import { NPC } from './NPC'
+import { FieldMap } from './FieldMap'
 
 const KIT_PATH = 'environment/new-kit/'
 
@@ -59,7 +60,7 @@ export function World() {
         )}
 
         {currentMapId === 'field_start' && (
-          <Trees />
+          <FieldMap />
         )}
 
         {npcs.map(npc => (

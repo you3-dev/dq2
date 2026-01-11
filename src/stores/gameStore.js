@@ -35,7 +35,7 @@ export const useGameStore = create((set, get) => ({
 
   // プレイヤー状態
   player: {
-    position: [0, 0, 0],
+    position: [0, 0, 15],
     rotation: 0,
     hp: 100,
     maxHp: 100,

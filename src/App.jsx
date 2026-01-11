@@ -1,6 +1,7 @@
 import { useRef, useState, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Sky, Environment } from '@react-three/drei'
+import { Physics } from '@react-three/rapier'
 import { Player } from './components/game/Player'
 import { Camera } from './components/game/Camera'
 import { World } from './components/game/World'
@@ -22,36 +23,33 @@ function Game() {
 
   return (
     <>
-      {/* ライティング */}
-      <ambientLight intensity={WORLD_CONFIG.ambientLightIntensity} />
-      <directionalLight
-        position={[50, 50, 25]}
-        intensity={WORLD_CONFIG.directionalLightIntensity}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-far={100}
-        shadow-camera-left={-50}
-        shadow-camera-right={50}
-        shadow-camera-top={50}
-        shadow-camera-bottom={-50}
-      />
+      <Physics>
+        {/* ライティング */}
+        <ambientLight intensity={WORLD_CONFIG.ambientLightIntensity} />
+        <directionalLight
+          position={[50, 50, 25]}
+          intensity={WORLD_CONFIG.directionalLightIntensity}
+          castShadow
+          shadow-mapSize={[2048, 2048]}
+          shadow-camera-far={100}
+          shadow-camera-left={-50}
+          shadow-camera-right={50}
+          shadow-camera-top={50}
+          shadow-camera-bottom={-50}
+        />
 
-      {/* 空 */}
-      <Sky sunPosition={[100, 50, 100]} />
+        {/* 空 */}
+        <Sky sunPosition={[100, 50, 100]} />
 
-      {/* カメラコントロール */}
-      <Camera playerRef={playerRef} />
+        {/* カメラコントロール */}
+        <Camera playerRef={playerRef} />
 
-      {/* プレイヤー */}
-      <Player onRef={(ref) => { playerRef.current = ref.current }} />
+        {/* プレイヤー */}
+        <Player onRef={(ref) => { playerRef.current = ref.current }} />
 
-      {/* ワールド */}
-      <World />
-
-      {/* 敵キャラクター */}
-      <Suspense fallback={null}>
-        <EnemyGroup enemies={DEFAULT_ENEMIES} />
-      </Suspense>
+        {/* ワールド */}
+        <World />
+      </Physics>
     </>
   )
 }

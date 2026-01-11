@@ -17,7 +17,7 @@ export function Player({ onRef }) {
   const mixerRef = useRef(null)
   const actionsRef = useRef({})
   const currentActionRef = useRef('Idle')
-  const { input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState } = useGameStore()
+  const { player, input, cameraAngle, updatePlayerPosition, updatePlayerRotation, gameState } = useGameStore()
   const velocity = useRef(new THREE.Vector3())
   const isMoving = useRef(false)
 
@@ -73,6 +73,14 @@ export function Player({ onRef }) {
       onRef(groupRef)
     }
   }, [onRef])
+
+  // マップ切り替え時などのテレポート同期
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.set(player.position[0], player.position[1], player.position[2])
+      groupRef.current.rotation.y = player.rotation
+    }
+  }, [player.position[0], player.position[1], player.position[2], player.rotation])
 
   // アニメーション切り替え関数
   const fadeToAction = (name, duration = 0.2) => {
@@ -135,7 +143,7 @@ export function Player({ onRef }) {
   })
 
   return (
-    <group ref={groupRef} position={[0, 0, 0]}>
+    <group ref={groupRef} position={player.position} rotation={[0, player.rotation, 0]}>
       <primitive
         object={scene}
         scale={0.5}
